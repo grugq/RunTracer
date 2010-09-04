@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
+#include <alloca.h>
 
 #include "runtrace.h"
 
 static FILE * OutFile;
+static TRACE_RECORD_FILE_HEADER FileHeader;
 
 
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
@@ -30,6 +32,10 @@ KNOB<BOOL> KnobTraceCalls(KNOB_MODE_WRITEONCE, "pintool",
 // memory tracer
 KNOB<BOOL> KnobTraceMemory(KNOB_MODE_WRITEONCE, "pintool",
 		"memory", "0", "enable memory tracing");
+
+// image load address tracer
+KNOB<BOOL> KnobTraceLibs(KNOB_MODE_WRITEONCE, "pintool",
+		"libs", "0", "track library image addresses");
 
 
 UINT32 Usage()
@@ -52,6 +58,8 @@ VOID EmitRecord(UINT32 tracetype, THREADID threadid, void *rec_data, size_t len)
 	memcpy(&record.call, rec_data, len);
 
 	fwrite(&record, sizeof(TRACE_RECORD_HEADER) + len, 1, OutFile);
+
+	FileHeader.num_records++;
 }
 
 VOID EmitBasicBlock(THREADID threadid, ADDRINT address)
@@ -105,6 +113,60 @@ static VOID EmitMemory(THREADID threadid, ADDRINT address, bool isStore, ADDRINT
 	record.target = ea;
 
 	EmitRecord(TRACE_TYPE_MEMORY, threadid, &record, sizeof(record));
+}
+
+static void
+EmitHeapAllocateRecord(THREADID threadid, ADDRINT memaddr, VOID *heapHandle, ULONG size)
+{
+	TRACE_RECORD_HEAP_ALLOC	record;
+
+	record.heap = heapHandle;
+	record.size = size;
+	record.address = memaddr;
+
+	EmitRecord(TRACE_TYPE_HEAP_ALLOC, threadid, &record, sizeof(record));
+}
+
+static void
+EmitHeapReAllocateRecord(THREADID threadid, ADDRINT address, VOID *heapHandle, ADDRINT oldaddress, ULONG size)
+{
+	TRACE_RECORD_HEAP_REALLOC	record;
+
+	record.heap = heapHandle;
+	record.address = address;
+	record.size = size;
+	record.oldaddress = oldaddress;
+
+	EmitRecord(TRACE_TYPE_HEAP_ALLOC, threadid, &record, sizeof(record));
+}
+
+static void
+EmitHeapFreeRecord(THREADID threadid, VOID *heapHandle, ADDRINT address)
+{
+	TRACE_RECORD_HEAP_FREE	record;
+
+	record.heap = heapHandle;
+	record.address = address;
+
+	EmitRecord(TRACE_TYPE_HEAP_ALLOC, threadid, &record, sizeof(record));
+}
+
+static VOID
+EmitLibraryLoadEvent(THREADID threadid, const string& name,
+			ADDRINT low, ADDRINT high)
+{
+	TRACE_LIBRARY_LOAD	* record;
+	size_t	  size;
+
+	size = sizeof(*record) + name.length();
+	record = (TRACE_LIBRARY_LOAD *) alloca(size);
+
+	record->low = low;
+	record->high = high;
+	record->namelen = name.length();
+	memcpy(record->name, name.c_str(), name.length());
+
+	EmitRecord(TRACE_TYPE_LIBRARY_LOAD, threadid, record, size);
 }
 
 VOID CallTrace(TRACE trace, INS ins)
@@ -188,17 +250,198 @@ static VOID MemoryTrace(TRACE trace, INS ins)
 	}
 }
 
+
+static void *
+replacementRtlAllocateHeap(
+		AFUNPTR rtlAllocateHeap,
+		WINDOWS::PVOID heapHandle,
+		WINDOWS::ULONG flags,
+		WINDOWS::SIZE_T size,
+		CONTEXT * ctx)
+{
+	WINDOWS::PVOID	retval;
+
+	PIN_CallApplicationFunction(ctx, PIN_ThreadId(),
+			CALLINGSTD_DEFAULT, rtlAllocateHeap,
+			PIN_PARG(void *), &retval,
+			PIN_PARG(WINDOWS::PVOID), heapHandle,
+			PIN_PARG(WINDOWS::ULONG), flags,
+			PIN_PARG(WINDOWS::SIZE_T), size,
+			PIN_PARG_END()
+			);
+
+	EmitHeapAllocateRecord(PIN_ThreadId(), retval, heapHandle, size);
+
+	return retval;
+};
+
+static WINDOWS::PVOID
+replacementRtlReAllocateHeap(
+		AFUNPTR rtlReAllocateHeap,
+		WINDOWS::PVOID heapHandle,
+		WINDOWS::ULONG hlags,
+		WINDOWS::PVOID memoryPtr,
+		WINDOWS::SIZE_T size,
+		CONTEXT *ctx)
+{
+	WINDOWS::PVOID	retval;
+
+	PIN_CallApplicationFunction(ctx, PIN_ThreadId(),
+			CALLINGSTD_DEFAULT, rtlReAllocateHeap,
+			PIN_PARG(void *), &retval,
+			PIN_PARG(WINDOWS::PVOID), heapHandle,
+			PIN_PARG(WINDOWS::ULONG), flags,
+			PIN_PARG(WINDOWS::PVOID), memoryPtr,
+			PIN_PARG(WINDOWS::SIZE_T), size,
+			PIN_PARG_END()
+			);
+	EmitHeapReAllocateRecord(PIN_ThreadId(), retval, heapHandle, memoryPtr, size);
+
+	return retval;
+}
+
+static WINDOWS::BOOL
+rtlFreeHeap(
+		AFUNPTR rtlFreeHeap,
+		WINDOWS::PVOID heapHandle,
+		WINDOWS::ULONG flags,
+		WINDOWS::PVOID memoryPtr,
+		CONTEXT *ctx)
+{
+	WINDOWS::BOOL 	retval;
+
+	PIN_CallApplicationFunction(ctx, PIN_ThreadId(),
+			CALLINGSTD_DEFAULT, rtlFreeHeap,
+			PIN_PARG(WINDOWS::BOOL), &retval,
+			PIN_PARG(WINDOWS::PVOID), heapHandle,
+			PIN_PARG(WINDOWS::ULONG), flags,
+			PIN_PARG(WINDOWS::PVOID), memoryPtr,
+			PIN_PARG_END()
+			);
+	EmitHeapFreeRecord(PIN_ThreadId(), heapHandle, memoryPtr);
+
+	return retval;
+}
+
+
+static VOID
+LogImageLoad(IMG img)
+{
+	const string name = IMG_Name(img);
+	ADDRINT low 	= IMG_LowAddress(img);
+	ADDRINT high	= IMG_HighAddress(img);
+
+	EmitLibraryLoadEvent(PIN_ThreadId(), IMG_Name(img), 
+				IMG_LowAddress(img), IMG_HighAddress(img));
+}
+
+static VOID
+HookHeapFunctions(IMG img)
+{
+	// make sure we got the right IMG
+	if ((RTN rtl = RTN_FindByName("RtlAllocateHeap")) == RTN_Invalid()) 
+		return;
+
+	// hook RtlAllocateHeap
+	RTN rtn = RTN_FindByName(img, "RtlAllocateHeap")
+	PROTO protoRtlAllocateHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+						"RtlAllocateHeap",
+						PIN_PARG(WINDOWS::PVOID), // HeapHandle
+						PIN_PARG(WINDOWS::ULONG),    // Flags
+						PIN_PARG(WINDOWS::SIZE_T),   // Size
+						PIN_PARG_END()
+						);
+
+	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlAllocateHeap,
+			IARG_PROTOTYPE, protoRtlAllocateHeap,
+			IARG_ORIG_FUNCPTR,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+			IARG_CONTEXT,
+			IARG_END
+			);
+
+	PROTO_Free(protoRtlAllocateHeap);
+
+	// replace RtlReAllocateHeap()
+	RTN rtn = RTN_FindByName(img, "RtlReAllocateHeap")
+	PROTO protoRtlReAllocateHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+						"RtlReAllocateHeap",
+						PIN_PARG(WINDOWS::PVOID), // HeapHandle
+						PIN_PARG(WINDOWS::ULONG), // Flags
+						PIN_PARG(WINDOWS::PVOID), // MemoryPtr
+						PIN_PARG(WINDOWS::SIZE_T),// Size
+						PIN_PARG_END()
+						);
+
+	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlReAllocateHeap,
+			IARG_PROTOTYPE, protoRtlReAllocateHeap,
+			IARG_ORIG_FUNCPTR,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 3,
+			IARG_CONTEXT,
+			IARG_END
+			);
+
+	PROTO_Free(protoRtlReAllocateHeap);
+
+	// replace RtlFreeHeap
+	RTN rtn = RTN_FindByName(img, "RtlFreeHeap")
+	PROTO protoRtlFreeHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+						"RtlFreeHeap",
+						PIN_PARG(WINDOWS::PVOID), // HeapHandle
+						PIN_PARG(WINDOWS::ULONG),    // Flags
+						PIN_PARG(WINDOWS::PVOID),   // MemoryPtr
+						PIN_PARG_END()
+						);
+
+	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlFreeHeap,
+			IARG_PROTOTYPE, protoRtlFreeHeap,
+			IARG_ORIG_FUNCPTR,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+			IARG_CONTEXT,
+			IARG_END
+			);
+
+	PROTO_Free(protoRtlAllocateHeap);
+
+	// replace RtlReAllocateHeap()
+	RTN rtn = RTN_FindByName(img, "RtlReAllocateHeap")
+	PROTO protoRtlReAllocateHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+						"RtlReAllocateHeap",
+						PIN_PARG(WINDOWS::PVOID), // HeapHandle
+						PIN_PARG(WINDOWS::ULONG), // Flags
+						PIN_PARG(WINDOWS::PVOID), // MemoryPtr
+						PIN_PARG(WINDOWS::SIZE_T),// Size
+						PIN_PARG_END()
+						);
+
+	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlReAllocateHeap,
+			IARG_PROTOTYPE, protoRtlReAllocateHeap,
+			IARG_ORIG_FUNCPTR,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
+			IARG_FUNCARG_ENTRYPOINT_VALUE, 3,
+			IARG_CONTEXT,
+			IARG_END
+			);
+
+	PROTO_Free(protoRtlReAllocateHeap);
+}
+
 VOID ImageLoad(IMG *img, VOID *v)
 {
-	if (!KnobTraceHeap)
-		return;
-	//
-	// RTN_FindByName(img, "RtlAllocateHeap")
-	// RTN_ReplaceSignature();
+	if (KnobTraceLibs)
+		LogImageLoad(img);
 
-	// replace RtlAllocateHeap(), RtlReallocateHeap(), RtlFreeHeap()
-	// replacement functions should store args, call underlying code,
-	// the EmitHeap*() using returned value
+	if (KnobTraceHeap)
+		HookHeapFunctions(img);
 }
 
 VOID
@@ -216,6 +459,10 @@ Trace(TRACE trace, VOID *v)
 
 VOID Fini(int, VOID *v)
 {
+	FileHeader.filesize = ftell(OutFile);
+	fseek(OutFile, 0, SEEK_SET);
+	fwrite(&FileHeader, sizeof(FileHeader), 1, OutFile);
+
 	fflush(OutFile);
 	fclose(OutFile);
 }
@@ -230,7 +477,15 @@ int main(int argc, char **argv)
 
 	OutFile = fopen(KnobOutputFile.Value().c_str(), "wb+");
 
+	FileHeader.addrsize = sizeof(ADDRINT);
+	FileHeader.magic = TRACE_RECORD_MAGIC;
+	FileHeader.filesize = sizeof(FileHeader);
+
+	fwrite(&FileHeader, sizeof(FileHeader), 1, OutFile);
+
 	TRACE_AddInstrumentFunction(Trace, 0);
+
+	IMG_AddInstrumentFunction(ImageLoad, 0);
 
 	PIN_AddFiniFunction(Fini, 0);
 
