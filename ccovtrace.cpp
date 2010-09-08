@@ -39,25 +39,9 @@ KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
 
 FILE	* traceFile;
-// typedef std::map<ADDRINT,unsigned int> basicBlock_t;
-// std::map<ADDRINT, basicBlock_t>	basicBlocks;
-std::map<THREADID,std::map<ADDRINT,std::map<ADDRINT,unsigned int>>> basicBlocks;
+std::map<string, int>	basicBlocks;
+std::map<THREADID, ADDRINT> addressLog;
 
-class ThreadBasicBlocks
-{
-	public:
-	ThreadBasicBlocks() : currentAddress(0);
-	~ThreadBasicBlocks();
-
-	void nextBBL(ADDRINT address) {
-		basicBlocks[currentAddress][address]++;
-		currentAddress = address;
-	}
-
-	private:
-	std::map<ADDRINT, std::map<ADDRINT,int>> basicBlocks;
-	ADDRINT	currentAddress;
-};
 
 UINT32 Usage()
 {
@@ -70,8 +54,16 @@ UINT32 Usage()
 static void
 LogBasicBlock(ADDRINT address, THREADID tid)
 {
-	basicBlocks[tid][currentAddress][address]++;
-	basicBlocks[address]++;
+	char	buf[32];
+	ADDRINT	currentAddress;
+
+
+	currentAddress = addressLog[tid];
+	addressLog[tid] = address;
+
+	sprintf(buf, "%#lx\t%#lx", currentAddress, address);
+
+	basicBlocks[string(buf)]++;
 }
 
 static VOID BasicBlockTrace(TRACE trace, BBL bbl)
@@ -96,9 +88,9 @@ Trace(TRACE trace, VOID *v)
 
 VOID Fini(int ignored, VOID *v)
 {
-	for (std::map<ADDRINT,int>::iterator it = basicBlocks.begin();
+	for (std::map<string,int>::iterator it = basicBlocks.begin();
 			it != basicBlocks.end(); it++) {
-		fprintf(traceFile, "%#08lx\t%d\n", (*it).first, (*it).second);
+		fprintf(traceFile, "%s\t%d\n", (*it).first.c_str(), (*it).second);
 	}
 }
 
