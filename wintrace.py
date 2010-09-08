@@ -19,7 +19,7 @@ def run_tracer(tool, args, target):
     os.system(cmd)
 
 def main(args):
-    run_tracer("exception_dump", "", "crash.exe")
+    run_tracer("ccovtrace", "", "winword")
 
 if __name__ == "__main__":
     main(sys.argv)
