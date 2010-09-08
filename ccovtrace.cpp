@@ -32,6 +32,7 @@ END_LEGAL */
 #include <stdio.h>
 #include <map>
 #include <iostream>
+#include <utility>
 #include "pin.H"
 
 
@@ -39,7 +40,7 @@ KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
 
 FILE	* traceFile;
-std::map<string, int>	basicBlocks;
+std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
 
 
@@ -54,16 +55,12 @@ UINT32 Usage()
 static void
 LogBasicBlock(ADDRINT address, THREADID tid)
 {
-	char	buf[32];
 	ADDRINT	currentAddress;
-
 
 	currentAddress = addressLog[tid];
 	addressLog[tid] = address;
 
-	sprintf(buf, "%#lx\t%#lx", currentAddress, address);
-
-	basicBlocks[string(buf)]++;
+	basicBlocks[std::make_pair(currentAddress, address)]++;
 }
 
 static VOID BasicBlockTrace(TRACE trace, BBL bbl)
@@ -88,9 +85,10 @@ Trace(TRACE trace, VOID *v)
 
 VOID Fini(int ignored, VOID *v)
 {
-	for (std::map<string,int>::iterator it = basicBlocks.begin();
+	for (std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it = basicBlocks.begin();
 			it != basicBlocks.end(); it++) {
-		fprintf(traceFile, "%s\t%d\n", (*it).first.c_str(), (*it).second);
+
+		fprintf(traceFile, "%#lx\t%#lx\t%d\n", (*it).first.first, (*it).first.second, (*it).second);
 	}
 }
 
