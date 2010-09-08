@@ -39,7 +39,25 @@ KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
 
 FILE	* traceFile;
-std::map<ADDRINT,int>	  basicBlocks;
+// typedef std::map<ADDRINT,unsigned int> basicBlock_t;
+// std::map<ADDRINT, basicBlock_t>	basicBlocks;
+std::map<THREADID,std::map<ADDRINT,std::map<ADDRINT,unsigned int>>> basicBlocks;
+
+class ThreadBasicBlocks
+{
+	public:
+	ThreadBasicBlocks() : currentAddress(0);
+	~ThreadBasicBlocks();
+
+	void nextBBL(ADDRINT address) {
+		basicBlocks[currentAddress][address]++;
+		currentAddress = address;
+	}
+
+	private:
+	std::map<ADDRINT, std::map<ADDRINT,int>> basicBlocks;
+	ADDRINT	currentAddress;
+};
 
 UINT32 Usage()
 {
@@ -50,8 +68,9 @@ UINT32 Usage()
 }
 
 static void
-LogBasicBlock(ADDRINT address)
+LogBasicBlock(ADDRINT address, THREADID tid)
 {
+	basicBlocks[tid][currentAddress][address]++;
 	basicBlocks[address]++;
 }
 
@@ -62,6 +81,7 @@ static VOID BasicBlockTrace(TRACE trace, BBL bbl)
 	INS_InsertCall(ins, IPOINT_BEFORE,
 			AFUNPTR(LogBasicBlock),
 			IARG_INST_PTR,
+			IARG_THREAD_ID,
 			IARG_END
 		      );
 }
