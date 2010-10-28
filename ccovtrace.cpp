@@ -44,15 +44,16 @@ std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
 
 
-UINT32 Usage()
+UINT32
+Usage()
 {
-	cout << "RunTrace tool for monitoring program execution" << endl;
+	cout << "CodeCoverage tool for dumping BBL control flows" << endl;
 	cout << KNOB_BASE::StringKnobSummary();
 	cout << endl;
 	return 2;
 }
 
-static void
+static VOID
 LogBasicBlock(ADDRINT address, THREADID tid)
 {
 	ADDRINT	currentAddress;
@@ -63,7 +64,8 @@ LogBasicBlock(ADDRINT address, THREADID tid)
 	basicBlocks[std::make_pair(currentAddress, address)]++;
 }
 
-static VOID BasicBlockTrace(TRACE trace, BBL bbl)
+static VOID
+BasicBlockTrace(TRACE trace, BBL bbl)
 {
 	INS ins = BBL_InsHead(bbl);
 
@@ -75,7 +77,7 @@ static VOID BasicBlockTrace(TRACE trace, BBL bbl)
 		      );
 }
 
-VOID
+static VOID
 Trace(TRACE trace, VOID *v)
 {
 	for (BBL bbl = TRACE_BblHead(trace); BBL_Valid(bbl); bbl = BBL_Next(bbl)) {
@@ -83,7 +85,8 @@ Trace(TRACE trace, VOID *v)
 	}
 }
 
-VOID Fini(int ignored, VOID *v)
+static VOID
+Fini(int ignored, VOID *v)
 {
 	for (std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it = basicBlocks.begin();
 			it != basicBlocks.end(); it++) {
