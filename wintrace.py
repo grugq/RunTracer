@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import time
+import threading
 import win32api
 import win32con
 import win32process
@@ -35,6 +36,11 @@ class Process(object):
         except Exception, e:
             print ">>>", repr(e)
 
+class DialogKiller(object):
+    def __init__(self):
+        self.pid = None
+    def spawn(self):
+        threading.run(self.dialog_killer)
 
 def enum_processes():
     for pid in win32process.EnumProcesses():
@@ -51,10 +57,23 @@ def get_process_by_name(name):
     except GeneratorExit:
         pass
 
-def kill_dialogs():
-    for app in ['OpusApp', 'winword.exe']:
-        for button in ['cancel', 'no', 'close', 'ok']:
-            os.system('nircmd dlg "%s" "" click %s' % (app, button))
+def spawn_dialog_killer():
+    return threading.Thread(target=kill_dialogs)
+
+class DialogKiller(threading.Thread):
+    def __init__(self):
+        self.killing = True
+    def stop_killing(self):
+        self.killing = False
+
+    def kill_dialogs(self):
+        for app in ['OpusApp', 'winword.exe']:
+            for button in ['cancel', 'no', 'close', 'ok']:
+                os.system('nircmd dlgany "%s" "" click %s' % (app, button))
+
+    def run(self):
+        while self.killing:
+            self.kill_dialogs()
 
 def run_tracer(tool, args, target):
     tracertool = os.path.join(tracepath, "obj-ia32", "%s.dll" % tool)
@@ -102,11 +121,16 @@ def main(args):
     target = "WINWORD /q  %s" % opts.fname
 
     run_tracer("ccovtrace", pin_args, target)
+    killer = DialogKiller()
+    killer.run()
+
     time.sleep(opts.timeout)
 
-    kill_dialogs()
+    killer.stop_killing()
     os.system('nircmd win close ititle "%s"' % "microsoft word")
 
+    # fuck it, thread can just die.. who cares? :)
+    # killer.join()
 
 if __name__ == "__main__":
     main(sys.argv)
