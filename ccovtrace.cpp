@@ -93,6 +93,8 @@ Fini(int ignored, VOID *v)
 
 		fprintf(traceFile, "%#lx\t%#lx\t%d\n", (*it).first.first, (*it).first.second, (*it).second);
 	}
+        fflush(traceFile);
+        fclose(traceFile);
 	PIN_ExitProcess(-1);
 }
 
