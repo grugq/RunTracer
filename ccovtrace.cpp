@@ -93,6 +93,15 @@ Fini(int ignored, VOID *v)
 
 		fprintf(traceFile, "%#lx\t%#lx\t%d\n", (*it).first.first, (*it).first.second, (*it).second);
 	}
+
+	for (IMG img = APP_ImgHead(); img != IMG_Invalid(); img = IMG_Next(img)){
+		ADDRINT	start = IMG_LowAddress(img);
+		ADDRINT	end = IMG_HighAddress(img);
+		const string &name = IMG_Name(img);
+
+		fprintf(traceFile, "{name:\"%s\", start: %#x, end: %#x}\n",
+				name.c_str(), start, end);
+	}
         fflush(traceFile);
         fclose(traceFile);
 	PIN_ExitProcess(-1);
