@@ -38,8 +38,11 @@ END_LEGAL */
 
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
+KNOB<string> KnobModuleOutputFile(KNOB_MODE_WRITEONCE, "pintool",
+		"mo", "trace.modules.out", "specifity module dump file name");
 
 FILE	* traceFile;
+FILE	* moduleFile;
 std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
 
@@ -86,6 +89,17 @@ Trace(TRACE trace, VOID *v)
 }
 
 static VOID
+ImageLoad(IMG img, VOID *v)
+{
+	ADDRINT	start = IMG_LowAddress(img);
+	ADDRINT	end = IMG_HighAddress(img);
+	const string &name = IMG_Name(img);
+
+	fprintf(moduleFile, "{name:\"%s\", start: %#x, end: %#x}\n",
+			name.c_str(), start, end);
+}
+
+static VOID
 Fini(int ignored, VOID *v)
 {
 	for (std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it = basicBlocks.begin();
@@ -94,16 +108,10 @@ Fini(int ignored, VOID *v)
 		fprintf(traceFile, "%#lx\t%#lx\t%d\n", (*it).first.first, (*it).first.second, (*it).second);
 	}
 
-	for (IMG img = APP_ImgHead(); img != IMG_Invalid(); img = IMG_Next(img)){
-		ADDRINT	start = IMG_LowAddress(img);
-		ADDRINT	end = IMG_HighAddress(img);
-		const string &name = IMG_Name(img);
-
-		fprintf(traceFile, "{name:\"%s\", start: %#x, end: %#x}\n",
-				name.c_str(), start, end);
-	}
         fflush(traceFile);
+        fflush(moduleFile);
         fclose(traceFile);
+        fclose(moduleFile);
 	PIN_ExitProcess(-1);
 }
 
@@ -116,8 +124,11 @@ int main(int argc, char **argv)
 	}
 
 	traceFile = fopen(KnobOutputFile.Value().c_str(), "wb+");
+	moduleFile = fopen(KnobModuleOutputFile.Value().c_str(), "wb+");
 
 	TRACE_AddInstrumentFunction(Trace, 0);
+
+	IMG_AddInstrumentFunction(ImageLoad, 0);
 
 	PIN_AddFiniFunction(Fini, 0);
 
