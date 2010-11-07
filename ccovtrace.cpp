@@ -30,21 +30,51 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 END_LEGAL */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <map>
+#include <list>
 #include <iostream>
 #include <utility>
 #include "pin.H"
 
+class Module {
+public:
+	Module(string *name, ADDRINT start, ADDRINT end)
+		: start(start), end(end)
+	{
+		this->name = name;
+	}
+
+	int compare(ADDRINT addr) { 
+		if (addr < this->start) return -1;
+		if (addr > this->end) return 1;
+		return 0;
+	}
+
+	BOOL contains(ADDRINT addr) {
+		return ((addr > start) && (addr < end));
+	}
+
+	ADDRINT offset(ADDRINT addr) { return addr - start; }
+
+	const string * Name(VOID) { return name; }
+	ADDRINT Start(VOID) { return start; }
+	ADDRINT End(VOID) { return end; }
+
+private:
+	const string	* name;
+	ADDRINT		  start;
+	ADDRINT		  end;
+};
 
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
-KNOB<string> KnobModuleOutputFile(KNOB_MODE_WRITEONCE, "pintool",
-		"mo", "trace.modules.out", "specifity module dump file name");
 
 FILE	* traceFile;
-FILE	* moduleFile;
 std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
+
+std::list<Module *>	moduleList;
 
 
 UINT32
@@ -88,15 +118,52 @@ Trace(TRACE trace, VOID *v)
 	}
 }
 
+static string *
+basename(const string &fullpath)
+{
+	size_t	found;
+
+	found = fullpath.rfind("\\");
+	return new string(fullpath.substr(found + 1));
+}
+
 static VOID
 ImageLoad(IMG img, VOID *v)
 {
 	ADDRINT	start = IMG_LowAddress(img);
 	ADDRINT	end = IMG_HighAddress(img);
-	const string &name = IMG_Name(img);
+	const string &fullpath = IMG_Name(img);
+	string 	* name = basename(fullpath);
 
-	fprintf(moduleFile, "{name:\"%s\", start: %#x, end: %#x}\n",
-			name.c_str(), start, end);
+	Module	* module = new Module(name, start, end);
+
+	moduleList.push_back(module);
+	return;
+}
+
+static const string *
+lookupSymbol(ADDRINT addr)
+{
+	std::list<Module *>::iterator	it;
+	char	s[256];
+	int	found = 0;
+
+	// have to do this whole thing because the IMG_* functions don't work here
+	for (it = moduleList.begin(); it != moduleList.end(); it++) {
+		if ((*it)->contains(addr)) {
+
+			sprintf(s, "%s+%x", (*it)->Name()->c_str(),
+					(*it)->offset(addr));
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		sprintf(s, "?%x", addr);
+	}
+
+	return new string(s);
 }
 
 static VOID
@@ -104,15 +171,20 @@ Fini(int ignored, VOID *v)
 {
 	for (std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it = basicBlocks.begin();
 			it != basicBlocks.end(); it++) {
+		const string	* symbol1 = lookupSymbol((*it).first.first);
+		const string 	* symbol2 = lookupSymbol((*it).first.second);
 
-		fprintf(traceFile, "%#lx\t%#lx\t%d\n", (*it).first.first, (*it).first.second, (*it).second);
+		fprintf(traceFile, "%s\t%s\t%d\n",
+				symbol1->c_str(), symbol2->c_str(),
+				(*it).second);
+
+		delete symbol1;
+		delete symbol2;
+
 	}
 
         fflush(traceFile);
-        fflush(moduleFile);
         fclose(traceFile);
-        fclose(moduleFile);
-	PIN_ExitProcess(-1);
 }
 
 int main(int argc, char **argv)
@@ -124,7 +196,6 @@ int main(int argc, char **argv)
 	}
 
 	traceFile = fopen(KnobOutputFile.Value().c_str(), "wb+");
-	moduleFile = fopen(KnobModuleOutputFile.Value().c_str(), "wb+");
 
 	TRACE_AddInstrumentFunction(Trace, 0);
 
