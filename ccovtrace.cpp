@@ -37,35 +37,6 @@ END_LEGAL */
 #include <utility>
 #include "pin.H"
 
-class Module {
-public:
-	Module(string *name, ADDRINT start, ADDRINT end)
-		: start(start), end(end)
-	{
-		this->name = name;
-	}
-
-	int compare(ADDRINT addr) { 
-		if (addr < this->start) return -1;
-		if (addr > this->end) return 1;
-		return 0;
-	}
-
-	BOOL contains(ADDRINT addr) {
-		return ((addr > start) && (addr < end));
-	}
-
-	ADDRINT offset(ADDRINT addr) { return addr - start; }
-
-	const string * Name(VOID) { return name; }
-	ADDRINT Start(VOID) { return start; }
-	ADDRINT End(VOID) { return end; }
-
-private:
-	const string	* name;
-	ADDRINT		  start;
-	ADDRINT		  end;
-};
 
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
@@ -73,8 +44,7 @@ KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 FILE	* traceFile;
 std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
-
-std::list<Module *>	moduleList;
+std::map<std::pair<ADDRINT,ADDRINT>, string *>	moduleList;
 
 
 UINT32
@@ -135,25 +105,26 @@ ImageLoad(IMG img, VOID *v)
 	const string &fullpath = IMG_Name(img);
 	string 	* name = basename(fullpath);
 
-	Module	* module = new Module(name, start, end);
-
-	moduleList.push_back(module);
+	moduleList[std::make_pair(start,end)] = name;
 	return;
 }
+
+#define CONTAINS(it,addr) ((addr>(*it).first.first)&&(addr<(*it).first.second))
 
 static const string *
 lookupSymbol(ADDRINT addr)
 {
-	std::list<Module *>::iterator	it;
+	std::map<std::pair<ADDRINT,ADDRINT>,string *>::iterator	it;
 	char	s[256];
 	int	found = 0;
 
 	// have to do this whole thing because the IMG_* functions don't work here
 	for (it = moduleList.begin(); it != moduleList.end(); it++) {
-		if ((*it)->contains(addr)) {
+		if (CONTAINS(it, addr)) {
+			ADDRINT offset = addr - (*it).first.first;
+			string *name = (*it).second;
 
-			sprintf(s, "%s+%x", (*it)->Name()->c_str(),
-					(*it)->offset(addr));
+			sprintf(s, "%s+%x", name->c_str(), offset);
 			found = 1;
 			break;
 		}
