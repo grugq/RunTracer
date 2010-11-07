@@ -37,14 +37,25 @@ END_LEGAL */
 #include <utility>
 #include "pin.H"
 
+#define WINDOWS_IS_FUCKING_FUCKED	1
+#ifdef WINDOWS_IS_FUCKING_FUCKED
+#define snprintf	sprintf_s
+#define stricmp		_stricmp
+#endif /* WINDOWS_IS_FUCKING_FUCKED */
+
 
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
 		"o", "trace.out", "specifity trace file name");
 
+KNOB<std::string> KnobModuleList(KNOB_MODE_APPEND, "pintool",
+		"m", "", "whitelist of module names, use more than once");
+
 FILE	* traceFile;
 std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
-std::map<std::pair<ADDRINT,ADDRINT>, string *>	moduleList;
+std::map<string *,std::pair<ADDRINT,ADDRINT>>	moduleList;
+
+static BOOL	whitelistMode = false;
 
 
 UINT32
@@ -88,6 +99,7 @@ Trace(TRACE trace, VOID *v)
 	}
 }
 
+
 static string *
 basename(const string &fullpath)
 {
@@ -97,41 +109,53 @@ basename(const string &fullpath)
 	return new string(fullpath.substr(found + 1));
 }
 
+#define	STRCMP(a, R, b)	(stricmp(a,b) R 0)
 static VOID
 ImageLoad(IMG img, VOID *v)
 {
+	std::map<std::string *,std::pair<ADDRINT,ADDRINT>>::iterator	it;
 	ADDRINT	start = IMG_LowAddress(img);
 	ADDRINT	end = IMG_HighAddress(img);
 	const string &fullpath = IMG_Name(img);
+
 	string 	* name = basename(fullpath);
 
-	moduleList[std::make_pair(start,end)] = name;
-	return;
+	if (whitelistMode) {
+		for (it = moduleList.begin(); it != moduleList.end(); it++) {
+			if (STRCMP((*it).first->c_str(), ==, name->c_str())) {
+
+				(*it).second = std::make_pair(start,end);
+				break;
+			}
+		}
+	} else {
+		moduleList[name] = std::make_pair(start,end);
+	}
 }
 
-#define CONTAINS(it,addr) ((addr>(*it).first.first)&&(addr<(*it).first.second))
+#define CONTAINS(it,addr) ((addr>(*it).second.first)&&(addr<(*it).second.second))
 
 static const string *
 lookupSymbol(ADDRINT addr)
 {
-	std::map<std::pair<ADDRINT,ADDRINT>,string *>::iterator	it;
+	std::map<string *,std::pair<ADDRINT,ADDRINT>>::iterator	it;
 	char	s[256];
 	int	found = 0;
 
 	// have to do this whole thing because the IMG_* functions don't work here
 	for (it = moduleList.begin(); it != moduleList.end(); it++) {
 		if (CONTAINS(it, addr)) {
-			ADDRINT offset = addr - (*it).first.first;
-			string *name = (*it).second;
+			ADDRINT offset = addr - (*it).second.first;
+			string *name = (*it).first;
 
-			sprintf(s, "%s+%x", name->c_str(), offset);
+			snprintf(s, sizeof(s), "%s+%x", name->c_str(), offset);
 			found = 1;
 			break;
 		}
 	}
 
 	if (!found) {
-		sprintf(s, "?%x", addr);
+		snprintf(s, sizeof(s), "?%#x", addr);
 	}
 
 	return new string(s);
@@ -140,8 +164,9 @@ lookupSymbol(ADDRINT addr)
 static VOID
 Fini(int ignored, VOID *v)
 {
-	for (std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it = basicBlocks.begin();
-			it != basicBlocks.end(); it++) {
+	std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it;
+
+	for (it = basicBlocks.begin(); it != basicBlocks.end(); it++) {
 		const string	* symbol1 = lookupSymbol((*it).first.first);
 		const string 	* symbol2 = lookupSymbol((*it).first.second);
 
@@ -167,6 +192,12 @@ int main(int argc, char **argv)
 	}
 
 	traceFile = fopen(KnobOutputFile.Value().c_str(), "wb+");
+
+	for (int i = 0; i < KnobModuleList.NumberOfValues(); i++) {
+		string *module = new string(KnobModuleList.Value(i));
+		moduleList[module] = std::make_pair(0,0);
+		whitelistMode = true;
+	}
 
 	TRACE_AddInstrumentFunction(Trace, 0);
 
