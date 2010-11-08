@@ -1,3 +1,8 @@
+# Author: Ben Nagy
+# Copyright: Copyright (c) Ben Nagy, 2006-2010.
+# License: The MIT License
+# (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
+
 require File.dirname(__FILE__) + "/word_tracer"
 require 'rubygems'
 require 'beanstalk-client'
@@ -47,6 +52,9 @@ class StalkTracer
             debug_info "New trace, len #{pdu['data'].size/1024}KB"
             mark=Time.now if @debug
             fname=prepare_file( pdu['data'] )
+            # An option here would be to put an iterative version of
+            # the blocking 'trace' method, so that we can touch the job
+            # in between the CPU monitor ticks.
             wt=WordTracer.new( fname, pdu['modules'] )
             result=wt.trace
             debug_info "Elapsed time #{Time.now - mark}" if @debug

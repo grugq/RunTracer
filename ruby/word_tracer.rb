@@ -1,3 +1,8 @@
+# Author: Ben Nagy
+# Copyright: Copyright (c) Ben Nagy, 2006-2010.
+# License: The MIT License
+# (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
+
 require 'rubygems'
 require 'trollop'
 require 'win32/process'
@@ -50,7 +55,7 @@ class WordTracer
                         PostMessage.call(child_hwnd,WM_COMMAND,IDOK,0)
                         PostMessage.call(child_hwnd,WM_DESTROY,0,0)
                     end
-                    # The script changes the caption, so this should only detect toplevel dialog boxes
+                    # This should only detect toplevel dialog boxes
                     # that pop up during open before the main Word window.
                     toplevel_box=FindWindow.call(0, "Microsoft Office Word")
                     unless toplevel_box==0
@@ -68,6 +73,8 @@ class WordTracer
     end
 
     def sweep
+        # This is a bit kludgy. Maybe add these patterns to the constants,
+        # or maybe take args...
         @patterns||=['R:/Temp/**/*.*', 'R:/Temporary Internet Files/**/*.*', 'R:/fuzzclient/~$*.doc', 'C:/metafuzz/case_generators/~$*.doc']
         @patterns.each {|pattern|
             Dir.glob(pattern, File::FNM_DOTMATCH).each {|fn|
@@ -87,6 +94,9 @@ class WordTracer
     end
 
     def pids( caption )
+        # This uses WMI. From my experience that might be a little
+        # more fragile than ToolHelp32Snapshot, but it's much easier
+        # and cleaner code.
         Sys::ProcTable.ps.to_a.select {|p|
             p.caption.upcase==caption.upcase
         }.map {|p| p.pid}
@@ -107,6 +117,9 @@ class WordTracer
     end
 
     def nicely_kill( caption )
+        # This verifies that the process is dead, so we should usually
+        # be able to read the trace output file immediately, since it
+        # is written by Pin::Fini(), as part of the process.
         retry_count=RETRY_COUNT
         loop do
             return if (pids=pids( caption )).empty?

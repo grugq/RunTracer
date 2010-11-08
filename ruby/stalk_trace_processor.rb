@@ -1,3 +1,8 @@
+# Author: Ben Nagy
+# Copyright: Copyright (c) Ben Nagy, 2006-2010.
+# License: The MIT License
+# (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
+
 require 'rubygems'
 require 'zlib'
 require 'beanstalk-client'
@@ -7,6 +12,9 @@ require 'oklahoma_mixer'
 
 class Set
 
+    # Add some packing methods to the basic Set class. This
+    # dramatically reduces the space required to store Sets 
+    # which are only Integers, but won't work otherwise.
     def pack
         bitstring='0'*(self.max+1)
         self.each {|e| bitstring[e]='1'}
@@ -42,14 +50,18 @@ class StalkTraceProcessor
     end
 
     def setup_store
+        # Will reuse existing files if they are there
         @lookup=OklahomaMixer.open( "#{@storename}-lookup.tch", :rcnum=>100_000 )
         @traces=OklahomaMixer.open( "#{@storename}-traces.tch" )
     end
 
     def deflate( set )
+        # because lookup stores the idx<-->edge_string mappings, we
+        # can derive total blocks covered by @lookup.size/2
         @lookup.transaction do
             set.map! {|elem|
                 unless (idx=@lookup[elem]) #already there
+                    # this works even if there is no 'idx' record
                     idx=@lookup.store 'idx', 1, :add
                     @lookup.store elem, idx
                     @lookup.store idx, elem
