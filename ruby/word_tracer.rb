@@ -12,7 +12,7 @@ class WordTracer
     COMPONENT="WordTracer"
     VERSION="1.0.0"
     PINPATH="C:\\pin\\pin.bat"
-    DLLPATH="C:\\runtracer\\obj-ia32\\ccovwhitelist.dll"
+    DLLPATH="C:\\runtracer\\obj-ia32\\ccovtrace.dll"
     WORDPATH="C:\\Program Files\\Microsoft Office\\Office12\\WINWORD.EXE"
     RETRY_COUNT=5
 
