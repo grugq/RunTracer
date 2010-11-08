@@ -68,7 +68,7 @@ class WordTracer
     end
 
     def sweep
-        @patterns||=['R:/Temp/**/*.*', 'R:/Temporary Internet Files/**/*.*', 'R:/fuzzclient/~$*.doc', 'C:/metafuzz/case_generators/~$*.doc']
+        @patterns||=['R:/Temp/**/*.*', 'R:/Temporary Internet Files/**/*.*', 'R:/fuzzclient/~$*.doc', 'C:/stalktracer/~$*.doc']
         @patterns.each {|pattern|
             Dir.glob(pattern, File::FNM_DOTMATCH).each {|fn|
                 next if File.directory?(fn)
