@@ -84,7 +84,7 @@ class StalkTraceProcessor
 
     def save_trace( filename, trace )
         packed_trace=create_set( trace ).pack
-        debug_info "Storing packed trace #{packed_trace.size/1024}KB"
+        debug_info "Storing packed trace #{packed_trace.size}B"
         @traces.store filename, packed_trace
     end
 
