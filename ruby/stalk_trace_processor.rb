@@ -1,20 +1,23 @@
 require 'rubygems'
+require 'zlib'
 require 'beanstalk-client'
 require 'msgpack'
 require 'oklahoma_mixer'
 
-class Store < Hash
-    # Placeholder for a KV store
-end
 
 class Set
 
-    def to_msgpack
-        self.to_a.to_msgpack
+    def pack
+        bitstring='0'*(self.max+1)
+        self.each {|e| bitstring[e]='1'}
+        Zlib::Deflate.deflate( [bitstring].pack('b*') )
     end
 
-    def self.from_msgpack( str )
-        Set.new MessagePack.unpack( str )
+    def self.unpack( str )
+        bitstring=Zlib::Inflate.inflate( str ).unpack('b*').first
+        ary=[]
+        (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
+        Set.new( ary )
     end
 
 end
@@ -80,7 +83,7 @@ class StalkTraceProcessor
     end
 
     def save_trace( filename, trace )
-        packed_trace=create_set( trace ).to_msgpack
+        packed_trace=create_set( trace ).pack
         debug_info "Storing packed trace #{packed_trace.size/1024}KB"
         @traces.store filename, packed_trace
     end
