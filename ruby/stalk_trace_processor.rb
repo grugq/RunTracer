@@ -105,6 +105,11 @@ class StalkTraceProcessor
         end
     end
 
+    def close_databases
+        @lookup.close
+        @traces.close
+    end
+
     def process_next
         debug_info "getting next trace"
         job=@stalk.reserve # from 'traced' tube
