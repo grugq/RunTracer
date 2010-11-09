@@ -51,7 +51,7 @@ class StalkTraceProcessor
 
     def setup_store
         # Will reuse existing files if they are there
-        @lookup=OklahomaMixer.open( "#{@storename}-lookup.tch", :rcnum=>100_000 )
+        @lookup=OklahomaMixer.open( "#{@storename}-lookup.tch", :rcnum=>1_000_000 )
         @traces=OklahomaMixer.open( "#{@storename}-traces.tch" )
     end
 
@@ -77,7 +77,7 @@ class StalkTraceProcessor
     end
 
     def debug_info( str )
-        warn "#{COMPONENT} : #{VERSION}: #{str}" if @debug
+        warn "#{COMPONENT}-#{VERSION}: #{str}" if @debug
     end
 
     def create_set( output )
@@ -86,18 +86,23 @@ class StalkTraceProcessor
         this_trace=Set.new
         lines.each {|l|
             from,to,count=l.split
-            from="NOMODULE" if from[0]=='?'
-            to="NOMODULE" if to[0]=='?'
-            this_trace.add "#{from}=>#{to}".to_sym
+            from="OUT" if from[0]==?? # chr '?' on 1.9, ord 63 on 1.8
+            to="OUT" if to[0]==??
+            this_trace.add "#{from}=>#{to}"
         }
         debug_info "#{this_trace.size} elements in Set"
         deflate this_trace
     end
 
     def save_trace( filename, trace )
-        packed_trace=create_set( trace ).pack
-        debug_info "Storing packed trace #{packed_trace.size}B"
-        @traces.store filename, packed_trace
+        set=create_set( trace )
+        covered=set.size
+        packed=set.pack
+        debug_info "Storing packed trace with #{covered} blocks @ #{"%.2f" % packed.size/1024.0}KB"
+        @traces.transaction do
+            @traces.store "trc:#{filename}", packed_trace
+            @traces.store "blk:#{filename}", covered
+        end
     end
 
     def process_next
