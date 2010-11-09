@@ -24,6 +24,7 @@ Thread.abort_on_exception=true
 
 # Objects shared between the two threads. No need for Mutex.
 inserter=StalkTraceInserter.new( OPTS[:servers], OPTS[:port], OPTS[:debug] )
+processor=StalkTraceProcessor.new( OPTS[:servers], OPTS[:port], OPTS[:output], OPTS[:debug] )
 queue_size=0
 
 # Insert files in this thread
@@ -39,7 +40,6 @@ end
 # Process results in this thread. We join this thread, because it doesn't exit
 # until the work is finished.
 Thread.new do
-    processor=StalkTraceProcessor.new( OPTS[:servers], OPTS[:port], OPTS[:output], OPTS[:debug] )
     loop do
         processor.process_next
         queue_size-=1
@@ -49,3 +49,5 @@ Thread.new do
         end
     end
 end.join
+
+trap "INT" {processor.close_databases;exit}
