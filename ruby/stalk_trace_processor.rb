@@ -98,7 +98,7 @@ class StalkTraceProcessor
         set=create_set( trace )
         covered=set.size
         packed=set.pack
-        debug_info "Storing packed trace with #{covered} blocks @ #{"%.2f" % packed.size/1024.0}KB"
+        debug_info "Storing packed trace with #{covered} blocks @ #{"%.2f" % (packed.size/1024.0)}KB"
         @traces.transaction do
             @traces.store "trc:#{filename}", packed_trace
             @traces.store "blk:#{filename}", covered
