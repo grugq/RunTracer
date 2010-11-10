@@ -32,18 +32,22 @@ trap("INT") { processor.close_databases; exit }
 
 # Insert files in this thread
 Thread.new do
-    Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
-        if OPTS[:keep]
-            if processor.has_file? fname
-                print '.' if OPTS[:debug]
-                next
+    begin
+        Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
+            if OPTS[:keep]
+                if processor.has_file? fname
+                    print '.' if OPTS[:debug]
+                    next
+                end
             end
-        end
-        sleep 1 until queue_size < 100
-        inserter.insert( File.open(fname, "rb") {|ios| ios.read}, File.basename( fname ), (OPTS[:modules]||[]) )
-        queue_size+=1
-    }
-    inserter.finish
+            sleep 1 until queue_size < 100
+            inserter.insert( File.open(fname, "rb") {|ios| ios.read}, File.basename( fname ), (OPTS[:modules]||[]) )
+            queue_size+=1
+        }
+        inserter.finish
+    rescue
+        raise $!
+    end
 end
 
 # Process results in this thread. We join this thread, because it doesn't exit
