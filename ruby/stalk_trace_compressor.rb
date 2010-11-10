@@ -32,26 +32,17 @@ class StalkTraceCompressor
     end
 
     def deflate( set )
-        # because lookup stores the idx<-->edge_string mappings, we
-        # can derive total blocks covered by @lookup.size/2
         # No transactions here :( TT doesn't support them.
         set.map! {|elem|
             unless (idx=@lookup[elem]) #already there
                 # this works even if there is no 'idx' record
                 idx=@lookup.addint 'idx', 1
-                @lookup.put elem, idx
-                @lookup.put idx, elem
+                # There is a race here, but if we lose then the only
+                # problem is incrementing the index for nothing (I hope)
+                @lookup.putkeep elem,idx 
+                idx=@lookup[elem]
             end
             Integer( idx )
-        }
-    end
-
-    def inflate( set )
-        # fetch raises if the key isn't present
-        set.map {|idx| 
-            elem=@lookup.get idx 
-            raise "#{COMPONENT}-#{VERSION}: Missing corresponding record in inflate!!" unless elem
-            elem
         }
     end
 
