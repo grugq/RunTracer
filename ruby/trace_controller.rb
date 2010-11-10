@@ -32,7 +32,7 @@ trap("INT") { processor.close_databases; exit }
 # Insert files in this thread
 Thread.new do
     Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
-        sleep 1 until queue_size < 10
+        sleep 1 until queue_size < 100
         inserter.insert( File.open(fname, "rb") {|ios| ios.read}, File.basename( fname ), (OPTS[:modules]||[]) )
         queue_size+=1
     }
