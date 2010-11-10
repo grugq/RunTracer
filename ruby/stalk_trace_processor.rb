@@ -42,7 +42,6 @@ class StalkTraceProcessor
     end
 
     def save_trace( filename, packed, covered, result )
-        debug_info "Storing trace of #{filename}(#{result}) with #{covered} blocks @ #{"%.2f" % (packed.size/1024.0)}KB"
         @traces.transaction do
             @traces.store "trc:#{filename}", packed
             @traces.store "blk:#{filename}", covered
