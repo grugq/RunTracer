@@ -33,20 +33,28 @@ class StalkTraceCompressor
 
     def deflate( set )
         # No transactions here :( TT doesn't support them.
-        set.map! {|elem|
-            unless (idx=@lookup[elem]) #already there
-                # this works even if there is no 'idx' record
-                idx=@lookup.addint 'idx', 1
-                # There is a race here, but if we lose then the only
-                # problem is incrementing the index for nothing (I hope)
-                begin
-                    @lookup.putkeep elem,idx 
-                rescue TokyoTyrantErrorKeep
-                    idx=@lookup[elem]
+        begin
+            collision_count=0
+            set=set.map {|elem|
+                unless (idx=@lookup[elem]) #already there
+                    # this works even if there is no 'idx' record
+                    idx=@lookup.addint 'idx', 1
+                    # There is a race here, but if we lose then the only
+                    # problem is incrementing the index for nothing (I hope)
+                    begin
+                        @lookup.putkeep elem,idx 
+                    rescue TokyoTyrantErrorKeep
+                        raise "Too racy" if (collision_count+=1) > 100
+                        idx=@lookup[elem]
+                    end
                 end
-            end
-            Integer( idx )
-        }
+                Integer( idx )
+            }
+        rescue
+            debug_info "Too many collisions, calming the fuck down"
+            sleep 60
+            retry
+        end
     end
 
     def debug_info( str )
