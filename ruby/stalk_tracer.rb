@@ -47,7 +47,7 @@ class StalkTracer
             to="OUT" if to[0]==??
             this_trace.add "#{from}=>#{to}"
         }
-        this_trace
+        this_trace.to_a
     end
 
     def send_result( result, trace_output, filename )

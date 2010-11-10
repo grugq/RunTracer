@@ -46,6 +46,7 @@ class StalkTraceProcessor
         servers=servers.map {|srv_str| "#{srv_str}:#{port}" }
         debug_info "Starting up, connecting to #{servers.join(' ')}"
         setup_store
+        debug_info "Opened databases..."
         @processed_count=0
         @stalk=Beanstalk::Pool.new servers
         @stalk.watch 'traced'
