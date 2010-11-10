@@ -16,12 +16,14 @@ class Set
     # dramatically reduces the space required to store Sets 
     # which are only Integers, but won't work otherwise.
     def pack
+        return "" if self.empty?
         bitstring='0'*(self.max+1)
         self.each {|e| bitstring[e]='1'}
         Zlib::Deflate.deflate( [bitstring].pack('b*') )
     end
 
     def self.unpack( str )
+        return Set.new if str.empty?
         bitstring=Zlib::Inflate.inflate( str ).unpack('b*').first
         ary=[]
         (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
@@ -71,6 +73,10 @@ class StalkTraceProcessor
         end
     end
 
+    def has_file?( fname )
+        @traces.has_key? "trc:#{fname}"
+    end
+
     def inflate( set )
         # fetch raises if the key isn't present
         set.map {|elem| @lookup.fetch elem}
@@ -81,27 +87,21 @@ class StalkTraceProcessor
     end
 
     def create_set( output )
-        lines=output.split("\n")
-        debug_info "#{lines.size} lines in trace"
-        this_trace=Set.new
-        lines.each {|l|
-            from,to,count=l.split
-            from="OUT" if from[0]==?? # chr '?' on 1.9, ord 63 on 1.8
-            to="OUT" if to[0]==??
-            this_trace.add "#{from}=>#{to}"
-        }
-        debug_info "#{this_trace.size} elements in Set"
-        deflate this_trace
+        set=Set.new(output)
+        raise "#{COMPONENT}-#{VERSION}: Set size should match array size from tracer" unless set.size==output.size
+        debug_info "#{set.size} elements in Set"
+        deflate set
     end
 
-    def save_trace( filename, trace )
+    def save_trace( filename, trace, result )
         set=create_set( trace )
         covered=set.size
         packed=set.pack
-        debug_info "Storing packed trace with #{covered} blocks @ #{"%.2f" % (packed.size/1024.0)}KB"
+        debug_info "Storing trace of #{filename}(#{result}) with #{covered} blocks @ #{"%.2f" % (packed.size/1024.0)}KB"
         @traces.transaction do
             @traces.store "trc:#{filename}", packed
             @traces.store "blk:#{filename}", covered
+            @traces.store "res:#{filename}", result
         end
     end
 
@@ -115,7 +115,7 @@ class StalkTraceProcessor
         job=@stalk.reserve # from 'traced' tube
         pdu=MessagePack.unpack( job.body )
         debug_info "Saving trace"
-        save_trace pdu['filename'], pdu['trace_output'] 
+        save_trace pdu['filename'], pdu['trace_output'], pdu['result'] 
         job.delete
         @processed_count+=1
     rescue

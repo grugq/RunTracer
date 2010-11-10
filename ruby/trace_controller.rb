@@ -10,10 +10,11 @@ require File.dirname( __FILE__ ) + '/stalk_trace_inserter'
 require File.dirname( __FILE__ ) + '/stalk_trace_processor'
 
 OPTS=Trollop::options do
-    opt :port, "Port to connect to, default 11300", :type=>:integer, :default=>11300
-    opt :servers, "Beanstalk servers to connect to, default 127.0.0.1", :type=>:strings, :default=>["127.0.0.1"]
+    opt :port, "Port to connect to", :type=>:integer, :default=>11300
+    opt :servers, "Beanstalk servers to connect to", :type=>:strings, :default=>["127.0.0.1"]
     opt :untraced, "Untraced file directory", :type=>:string, :required=>:true
-    opt :modules, "Show offsets for these modules (other addresses raw), default ALL", :type=>:strings
+    opt :modules, "Show offsets for these modules (other addresses raw)", :type=>:strings
+    opt :keep, "Don't overwrite existing trace results", :type=>:boolean
     opt :output, "Output directory", :type=>:string, :required=>:true
     opt :debug, "Enable debug output", :type=>:boolean
 end
@@ -32,6 +33,12 @@ trap("INT") { processor.close_databases; exit }
 # Insert files in this thread
 Thread.new do
     Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
+        if OPTS[:keep]
+            if processor.has_file? fname
+                print '.' if OPTS[:debug]
+                next
+            end
+        end
         sleep 1 until queue_size < 10
         inserter.insert( File.open(fname, "rb") {|ios| ios.read}, File.basename( fname ), (OPTS[:modules]||[]) )
         queue_size+=1

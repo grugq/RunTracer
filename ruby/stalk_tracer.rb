@@ -39,9 +39,21 @@ class StalkTracer
         end
     end
 
+    def preprocess( trace_output )
+        this_trace=Set.new
+        trace_output.split("\n").each {|l|
+            from,to,count=l.split
+            from="OUT" if from[0]==?? # chr '?' on 1.9, ord 63 on 1.8
+            to="OUT" if to[0]==??
+            this_trace.add "#{from}=>#{to}"
+        }
+        this_trace
+    end
+
     def send_result( result, trace_output, filename )
-        debug_info "Sending trace output (result #{result}) len #{trace_output.size/1024}KB"
+        trace_output=preprocess( trace_output )
         pdu={'result'=>result,'trace_output'=>trace_output, 'filename'=>filename}.to_msgpack
+        debug_info "Sending trace output (result #{result}) len #{pdu.size/1024}KB"
         @stalk.put pdu # to 'traced' tube
     end
 
