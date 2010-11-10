@@ -29,6 +29,7 @@ processor=StalkTraceProcessor.new( OPTS[:servers], OPTS[:port], OPTS[:output], O
 queue_size=0
 
 trap("INT") { processor.close_databases; exit }
+puts "setting up threads"
 
 # Insert files in this thread
 Thread.new do
@@ -53,6 +54,7 @@ end
 # Process results in this thread. We join this thread, because it doesn't exit
 # until the work is finished.
 Thread.new do
+puts "entering processor"
     loop do
         processor.process_next
         queue_size-=1
