@@ -63,6 +63,8 @@ class StalkTraceProcessor
         job.delete
         @processed_count+=1
     rescue
+        p pdu['covered']
+        p pdu['packed'][0..100]
         raise $!
     end
 
