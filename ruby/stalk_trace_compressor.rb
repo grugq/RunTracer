@@ -40,13 +40,15 @@ class StalkTraceCompressor
         set.map! {|elem|
             unless (idx=@lookup[elem]) #already there
                 added+=1
-                changes[current+added]=elem
-                changes[elem]=current+added
+                changes[(current+added)]=elem
+                changes[elem]=(current+added)
                 current+added
             else
                 Integer( idx )
             end
         }
+        p changes
+        p changes.class
         @lookup.mput changes
         @lookup.addint 'idx', added
         set
