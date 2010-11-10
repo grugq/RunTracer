@@ -40,16 +40,24 @@ class StalkTraceCompressor
         set.map! {|elem|
             unless (idx=@lookup[elem]) #already there
                 added+=1
-                changes[current+added]=elem
-                changes[elem]=current+added
+                changes[(current+added)]=elem
+                changes[elem]=(current+added)
                 current+added
             else
                 Integer( idx )
             end
         }
-        @lookup.mput changes
-        @lookup.addint 'idx', added
+        unless current=0
+            @lookup.mput changes
+            @lookup.addint 'idx', added
+        else
+            changes.each {|k,v| @lookup.putnr k, v}
+            @lookup.addint 'idx', added
+        end
         set
+    rescue
+        puts $!
+        raise $!
     end
 
     def debug_info( str )
