@@ -31,7 +31,7 @@ class StalkTraceCompressor
         @lookup.close
     end
 
-    def deflate( set )
+    def deflate!( set )
         changes={}
         current=Integer( @lookup.store('idx', 0, :add) )
         added=0
@@ -64,8 +64,9 @@ class StalkTraceCompressor
         raise "#{COMPONENT}-#{VERSION}: Set size should match array size from tracer" unless set.size==output.size
         debug_info "#{set.size} elements in Set"
         mark=Time.now
-        deflate set
+        deflate! set
         debug_info "Deflated in #{Time.now - mark} seconds."
+        set
     end
 
     def compress_trace( trace )
