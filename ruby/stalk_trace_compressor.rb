@@ -47,7 +47,7 @@ class StalkTraceCompressor
                 Integer( idx )
             end
         }
-        unless current=0
+        unless current.zero?
             @lookup.mput changes
             @lookup.addint 'idx', added
         else
