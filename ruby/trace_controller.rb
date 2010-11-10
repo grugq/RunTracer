@@ -39,7 +39,7 @@ Thread.new do
                 next
             end
         end
-        sleep 1 until queue_size < 10
+        sleep 1 until queue_size < 100
         inserter.insert( File.open(fname, "rb") {|ios| ios.read}, File.basename( fname ), (OPTS[:modules]||[]) )
         queue_size+=1
     }
