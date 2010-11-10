@@ -10,12 +10,11 @@ require File.dirname( __FILE__ ) + '/stalk_trace_compressor'
 OPTS=Trollop::options do
     opt :port, "Beanstalk port to connect to", :type=>:integer, :default=>11300
     opt :servers, "Beanstalk servers to connect to", :type=>:strings, :default=>["127.0.0.1"]
-    opt :dbserver, "TT Server to connect to", :type=>:string, :default=>"127.0.0.1"
-    opt :xport, "TT Port to connect to", :type=>:integer, :default=>1978
+    opt :name, "Name for the store files", :type=>:string, :default=>"ccov"
     opt :debug, "Enable debug output", :type=>:boolean
 end
 
-compressor=StalkTraceCompressor.new( OPTS[:servers], OPTS[:port], OPTS[:dbserver], OPTS[:xport], OPTS[:debug] )
+compressor=StalkTraceCompressor.new( OPTS[:servers], OPTS[:port], OPTS[:name], OPTS[:debug] )
 
 trap("INT") { compressor.close_database; exit }
 

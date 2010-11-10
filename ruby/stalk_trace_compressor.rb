@@ -6,7 +6,7 @@
 require 'rubygems'
 require 'beanstalk-client'
 require 'msgpack'
-require 'tokyo_tyrant'
+require 'oklahoma_mixer'
 require File.dirname( __FILE__ ) + '/set_extensions'
 
 class StalkTraceCompressor
@@ -16,13 +16,13 @@ class StalkTraceCompressor
 
     attr_reader :processed_count
 
-    def initialize( beanstalk_servers, beanstalk_port, tt_server, tt_port, debug )
+    def initialize( beanstalk_servers, beanstalk_port, store, debug )
         @debug=debug
         servers=beanstalk_servers.map {|srv_str| "#{srv_str}:#{beanstalk_port}" }
         debug_info "Starting up, connecting to #{beanstalk_servers.join(' ')}"
-        @lookup=TokyoTyrant::DB.new( tt_server, tt_port ) 
-        debug_info "Opened remote database..."
         @stalk=Beanstalk::Pool.new servers
+        @lookup=OklahomaMixer.open("#{store}-lookup.tch", :rcnum=>1_000_000)
+        debug_info "Opened database..."
         @stalk.watch 'traced'
         @stalk.use 'compressed'
     end
@@ -32,10 +32,8 @@ class StalkTraceCompressor
     end
 
     def deflate( set )
-        # No transactions here :( TT doesn't support them.
-        # NOT SAFE for multiple processes
         changes={}
-        current=Integer( @lookup.addint 'idx', 0 )
+        current=Integer( @lookup.store('idx', 0, :add) )
         added=0
         set.map! {|elem|
             unless (idx=@lookup[elem]) #already there
@@ -47,13 +45,8 @@ class StalkTraceCompressor
                 Integer( idx )
             end
         }
-        unless current.zero?
-            @lookup.mput changes
-            @lookup.addint 'idx', added
-        else
-            changes.each {|k,v| @lookup.putnr k, v}
-            @lookup.addint 'idx', added
-        end
+        @lookup.update changes
+        @lookup.store 'idx', added, :add
         set
     rescue
         puts $!
