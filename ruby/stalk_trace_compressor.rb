@@ -21,7 +21,7 @@ class StalkTraceCompressor
         servers=beanstalk_servers.map {|srv_str| "#{srv_str}:#{beanstalk_port}" }
         debug_info "Starting up, connecting to #{beanstalk_servers.join(' ')}"
         @stalk=Beanstalk::Pool.new servers
-        @lookup=OklahomaMixer.open("#{store}-lookup.tch", :rcnum=>1_000_000)
+        @lookup=OklahomaMixer.open("#{store}-lookup.tch", :rcnum=>2_000_000)
         debug_info "Opened database..."
         @stalk.watch 'traced'
         @stalk.use 'compressed'
