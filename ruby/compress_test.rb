@@ -132,7 +132,7 @@ end
 
 puts "Getting some traces"
 
-bs=Beanstalk::Pool.new ['127.0.0.1'], 1130
+bs=Beanstalk::Pool.new ['127.0.0.1'], 11300
 test_traces=[]
 jobs=[]
 10.times do
