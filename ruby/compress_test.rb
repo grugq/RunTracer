@@ -22,6 +22,7 @@ class TraceCompressor
 
     def initialize_lookups( thread_safe )
         @tc=OklahomaMixer.open("test-lookup.tch", :rcnum=>2_000_000)
+        @tc.clear
         @redis=Redis.new :thread_safe=>thread_safe
         @redis.flushdb
     end
