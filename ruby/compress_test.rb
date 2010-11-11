@@ -23,6 +23,7 @@ class TraceCompressor
     def initialize_lookups( thread_safe )
         @tc=OklahomaMixer.open("test-lookup.tch", :rcnum=>2_000_000)
         @redis=Redis.new :thread_safe=>thread_safe
+        @redis.flushdb
     end
 
     def close_databases
@@ -160,6 +161,7 @@ test_traces.each {|test|
     s2=codec.decompress_trace packed, :tc
     puts "TC Decompress in #{Time.now - mark}"
     fail unless s1==s2
+    puts "Sets match."
     # compress with TC
     mark=Time.now
     covered, packed=codec.compress_trace( test, :redis )
@@ -170,8 +172,6 @@ test_traces.each {|test|
     s2=codec.decompress_trace packed, :redis
     puts "Redis Decompress in #{Time.now - mark}"
     fail unless s1==s2
+    puts "Sets match."
 }
 puts "Done."
-
-
-    
