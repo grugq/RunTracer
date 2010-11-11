@@ -16,13 +16,13 @@ class TraceCompressor
     VERSION="1.0.0"
     PREFIX="#{COMPONENT}-#{VERSION}"
 
-    def initialize 
-        initialize_lookups
+    def initialize( thread_safe=false )
+        initialize_lookups thread_safe
     end
 
-    def initialize_lookup
+    def initialize_lookups( thread_safe )
         @tc=OklahomaMixer.open("test-lookup.tch", :rcnum=>2_000_000)
-        @redis=Redis.new( :host=>@opts[:redis_server], :port=>@opts[:redis_port] )
+        @redis=Redis.new :thread_safe=>thread_safe
     end
 
     def close_databases
