@@ -135,18 +135,19 @@ puts "Getting some traces"
 bs=Beanstalk::Pool.new ['127.0.0.1:11300']
 bs.watch "traced"
 test_traces=[]
-jobs=[]
 10.times do
     job=bs.reserve
     pdu=MessagePack.unpack( job.body )
     test_traces << pdu['trace_output'] # an array
-    jobs << job
+    job.release
 end
-jobs.each {|j| r.release }
+
+puts "Got them."
 
 codec=TraceCompressor.new
 
 test_traces.each {|test|
+    "Starting test with a trace #{test.size}"
     # compress with TC
     mark=Time.now
     covered, packed=codec.compress_trace( test, :tc )
