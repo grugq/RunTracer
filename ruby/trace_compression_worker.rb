@@ -13,6 +13,7 @@ OPTS=Trollop::options do
     opt :lookup_type, "Lookup to use, redis or tc", :type=>:string, :default=>"tc"
     opt :redis_port, "Redis port, for redis", :type=>:integer, :default=>6379
     opt :redis_server, "Redis server, for redis", :type=>:string, :default=>"127.0.0.1"
+    opt :lookup_file, "Use existing lookup file, for tc", :type=>:string, :default=>"ccov-lookup.tch"
     opt :debug, "Enable debug output", :type=>:boolean
 end
 
@@ -22,6 +23,7 @@ compressor_opts={
     :redis_server=>OPTS[:redis_server],
     :redis_port=>OPTS[:redis_port],
     :lookup_type=>OPTS[:lookup_type].to_sym,
+    :lookup_file=>OPTS[:lookup_file]
     :debug=>OPTS[:debug]
 }
 

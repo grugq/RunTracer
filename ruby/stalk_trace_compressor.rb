@@ -19,8 +19,13 @@ class StalkTraceCompressor
         :beanstalk_servers=>["127.0.0.1"],
         :beanstalk_port=>11300,
         :debug=>false,
-        :lookup_type=>:tc
+        :lookup_type=>:tc,
+        :redis_server=>"127.0.0.1",
+        :redis_port=>6379,
+        :lookup_file=>"ccov-lookup.tch",
+        :debug=>OPTS[:debug]
     }
+    TCCACHE=2_000_000 # Number of TokyoCabinet records to cache
 
     def initialize( opt_hsh )
         @opts=DEFAULTS.merge( opt_hsh )
@@ -38,11 +43,8 @@ class StalkTraceCompressor
         debug_info "Using lookup type #{@opts[:lookup_type]}"
         case @opts[:lookup_type]
         when :tc
-            @lookup=OklahomaMixer.open("#{store}-lookup.tch", :rcnum=>2_000_000)
+            @lookup=OklahomaMixer.open(@opts[:lookup_file], :rcnum=>TCCACHE)
         when :redis
-            unless @opts[:redis_server] && @opts[:redis_port]
-                raise "#{PREFIX}: lookup type redis, but no server / port options."
-            end
             @lookup=Redis.new( :host=>@opts[:redis_server], :port=>@opts[:redis_port] )
         else
             raise "#{PREFIX}: Unknown lookup type"
@@ -53,30 +55,10 @@ class StalkTraceCompressor
         @lookup.close
     end
 
-    def tc_deflate!( set )
-        # Single thread / core only!
-        changes={}
-        current=Integer( @lookup.store('idx', 0, :add) )
-        added=0
-        set.map! {|elem|
-            unless (idx=@lookup[elem]) #already there
-                added+=1
-                changes[(current+added)]=elem
-                changes[elem]=(current+added)
-                current+added
-            else
-                Integer( idx )
-            end
-        }
-        @lookup.transaction do
-            @lookup.update changes
-            @lookup.store 'idx', added, :add
-        end
-        set
-    end
-
     def redis_store( word )
-        # Safe concurrent access to the Redis DB
+        # Safe concurrent worker access to the Redis DB
+        # but NOT for threads, need to add the :thread_safe
+        # option to Redis.new for that.
         loop do
             @lookup.watch("words")
             value = @lookup.hget("words", word)
@@ -93,6 +75,23 @@ class StalkTraceCompressor
         set.map! {|elem|
             Integer( redis_store(elem) )
         }
+    end
+
+    def tc_deflate!( set )
+        # Single thread / core only!
+        cur=@lookup.size/2
+        cached={}
+        set.map! {|elem|
+            unless (idx=@lookup[elem]) 
+                cur+=1
+                cached[cur]=elem
+                cached[elem]=cur
+                Integer( cur )
+            else
+                Integer( idx )
+            end
+        }
+        @lookup.update cached
         set
     end
 
@@ -113,9 +112,9 @@ class StalkTraceCompressor
         set=Set.new(output)
         raise "#{PREFIX}: Set size should match array size from tracer" unless set.size==output.size
         debug_info "#{set.size} elements in Set"
-        mark=Time.now
+        mark=Time.now if @debug
         deflate! set
-        debug_info "Deflated in #{Time.now - mark} seconds."
+        debug_info "Deflated in #{Time.now - mark} seconds." if @debug
         set
     end
 

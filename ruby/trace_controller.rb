@@ -35,7 +35,7 @@ Thread.new do
     begin
         Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
             if OPTS[:keep]
-                if processor.has_file? fname
+                if processor.has_file? File.basename( fname )
                     print '.' if OPTS[:debug]
                     next
                 end
