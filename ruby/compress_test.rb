@@ -34,14 +34,14 @@ class TraceCompressor
 
     def tc_deflate!( set )
         # Single thread / core only!
-        idx=@tc.size/2
+        cur=@tc.size/2
         cached={}
         set.map! {|elem|
             unless (idx=@tc[elem]) #already there
-                idx+=1
-                cached[idx]=elem
-                cached[elem]=idx
-                Integer( idx )
+                cur+=1
+                cached[cur]=elem
+                cached[elem]=cur
+                Integer( cur )
             else
                 Integer( idx )
             end
