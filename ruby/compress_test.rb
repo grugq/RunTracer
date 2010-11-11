@@ -135,12 +135,14 @@ puts "Getting some traces"
 bs=Beanstalk::Pool.new ['127.0.0.1:11300']
 bs.watch "traced"
 test_traces=[]
+jobs=[]
 10.times do
     job=bs.reserve
     pdu=MessagePack.unpack( job.body )
     test_traces << pdu['trace_output'] # an array
-    job.release
+    jobs << job
 end
+jobs.map &:release
 
 puts "Got them."
 
@@ -152,20 +154,20 @@ test_traces.each {|test|
     mark=Time.now
     covered, packed=codec.compress_trace( test, :tc )
     puts "TC Compress in #{Time.now - mark}"
-    assert_equal covered, test.size
+    fail unless covered==test.size
     s1=Set.new test
     s2=compressor.decompress_trace packed, :tc
     puts "TC Decompress in #{Time.now - mark}"
-    assert_equal s1, s2
+    fail unless s1==s2
     # compress with TC
     mark=Time.now
     covered, packed=codec.compress_trace( test, :redis )
     puts "Redis Compress in #{Time.now - mark}"
-    assert_equal covered, test.size
+    fail unless covered==test.size
     s1=Set.new test
     s2=compressor.decompress_trace packed, :redis
     puts "Redis Decompress in #{Time.now - mark}"
-    assert_equal s1, s2
+    fail unless s1==s2
 }
 puts "Done."
 
