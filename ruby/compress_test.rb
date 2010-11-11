@@ -153,19 +153,21 @@ test_traces.each {|test|
     # compress with TC
     mark=Time.now
     covered, packed=codec.compress_trace( test, :tc )
-    puts "TC Compress in #{Time.now - mark}"
+    puts "TC Compress in #{Time.now - mark} #{"%.2f" % (packed.size/1024.0)}"
     fail unless covered==test.size
     s1=Set.new test
-    s2=compressor.decompress_trace packed, :tc
+    mark=Time.now
+    s2=codec.decompress_trace packed, :tc
     puts "TC Decompress in #{Time.now - mark}"
     fail unless s1==s2
     # compress with TC
     mark=Time.now
     covered, packed=codec.compress_trace( test, :redis )
-    puts "Redis Compress in #{Time.now - mark}"
+    puts "Redis Compress in #{Time.now - mark} #{"%.2f" % (packed.size/1024.0)}"
     fail unless covered==test.size
     s1=Set.new test
-    s2=compressor.decompress_trace packed, :redis
+    mark=Time.now
+    s2=codec.decompress_trace packed, :redis
     puts "Redis Decompress in #{Time.now - mark}"
     fail unless s1==s2
 }
