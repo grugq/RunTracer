@@ -23,7 +23,7 @@ compressor_opts={
     :redis_server=>OPTS[:redis_server],
     :redis_port=>OPTS[:redis_port],
     :lookup_type=>OPTS[:lookup_type].to_sym,
-    :lookup_file=>OPTS[:lookup_file]
+    :lookup_file=>OPTS[:lookup_file],
     :debug=>OPTS[:debug]
 }
 
