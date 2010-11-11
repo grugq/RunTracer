@@ -33,23 +33,16 @@ class TraceCompressor
 
     def tc_deflate!( set )
         # Single thread / core only!
-        changes={}
-        current=Integer( @tc.store('idx', 0, :add) )
-        added=0
         set.map! {|elem|
             unless (idx=@tc[elem]) #already there
-                added+=1
-                changes[(current+added)]=elem
-                changes[elem]=(current+added)
-                current+added
+                idx=@tc.store 'idx', 1, :add
+                @tc[idx]=elem
+                @tc[elem]=idx
+                Integer( idx )
             else
                 Integer( idx )
             end
         }
-        @tc.transaction do
-            @tc.update changes
-            @tc.store 'idx', added, :add
-        end
         set
     end
 
@@ -76,7 +69,7 @@ class TraceCompressor
 
     def redis_inflate! set
         set.map! {|elem|
-            @redis.hget("words", word)
+            @redis.hget("words", elem)
         }
     end
 
