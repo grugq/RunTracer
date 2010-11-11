@@ -23,7 +23,7 @@ class StalkTraceCompressor
         :redis_server=>"127.0.0.1",
         :redis_port=>6379,
         :lookup_file=>"ccov-lookup.tch",
-        :debug=>OPTS[:debug]
+        :debug=>true
     }
     TCCACHE=2_000_000 # Number of TokyoCabinet records to cache
 
