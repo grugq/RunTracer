@@ -64,9 +64,7 @@ def greedy_reduce( set_hash )
         this_set=Set.unpack( hsh[:trace] )
         global_coverage=global_coverage.union( this_set )
         hsh[:set]=(this_set - best_set)
-        print '.'
     }
-    print "\n"
     candidates.delete_if {|fn, hsh| hsh[:set].empty? }
     candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
     best_fn, best_hsh=candidates.pop
@@ -88,7 +86,6 @@ def greedy_reduce( set_hash )
         minset.push best_fn
         best_set=best_hsh[:set]
         coverage=coverage.union( best_set )
-        puts "C:#{candidates.size} M:#{minset.size} ccov:#{coverage.size}"
     end
     raise "Bugger." unless coverage.size==global_coverage.size
     [minset, coverage]
@@ -100,4 +97,5 @@ until fraction==1
     puts "FULL: #{full.size} THIS: #{this_sample.size}"
     minset, coverage=greedy_reduce( this_sample )
     puts "This sample Minset #{minset.size}, covers #{coverage.size}"
+    fraction=fraction*2
 end
