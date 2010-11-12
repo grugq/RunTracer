@@ -35,7 +35,7 @@ class Set
         return Set.new if str.empty?
         header,body=str.split(',',2)
         size, level=header.split(':')
-        unless size==body.size
+        unless size.to_i==body.size
             raise ArgumentError, "Couldn't read packed string"
         end
         case Integer( compression_level )

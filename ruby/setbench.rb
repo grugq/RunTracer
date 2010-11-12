@@ -5,49 +5,27 @@
 
 require File.dirname( __FILE__ ) + '/set_extensions'
 
-s=Set.new
+S=Set.new
 
 puts "Generating set"
 until s.size==350_000
     s.add rand(500_000)
 end
 
-puts "Level 0"
-str=s.pack(0)
-puts "#{"%.3f" % (str.size/1024.0)}"
-s2=Set.unpack( str, 0 )
-fail unless s2==s
-(Integer( ARGV[0] ) - 1).times do
-    str=s.pack(0)
-    s2=Set.unpack( str, 0 )
+def bench( level, n )
+    puts "Level #{level}"
+    mark=Time.now
+    str=S.pack( level )
+    puts "#{"%.3f" % (str.size/1024.0)}"
+    s2=Set.unpack( str, level )
+    fail unless s2==S
+    (n - 1).times do
+        str=S.pack(level)
+        s2=Set.unpack( str, level )
+    end
+    puts "#{Time.now - mark}"
 end
 
-puts "Level 1"
-str=s.pack(1)
-puts "#{"%.3f" % (str.size/1024.0)}"
-s2=Set.unpack( str, 1 )
-fail unless s2==s
-(Integer( ARGV[0] ) - 1).times do
-    str=s.pack(1)
-    s2=Set.unpack( str, 1 )
-end
-
-puts "Level 2"
-str=s.pack(2)
-puts "#{"%.3f" % (str.size/1024.0)}"
-s2=Set.unpack( str, 2 )
-fail unless s2==s
-(Integer( ARGV[0] ) - 1).times do
-    str=s.pack(2)
-    s2=Set.unpack( str, 2 )
-end
-
-puts "Level 3"
-str=s.pack(3)
-puts "#{"%.3f" % (str.size/1024.0)}"
-s2=Set.unpack( str, 3 )
-fail unless s2==s
-(Integer( ARGV[0] ) - 1).times do
-    str=s.pack(3)
-    s2=Set.unpack( str, 3 )
-end
+(0..3).each {|level|
+    bench( level, ARGV[0].to_i )
+}
