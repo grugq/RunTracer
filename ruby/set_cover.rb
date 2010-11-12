@@ -41,5 +41,6 @@ end
 tdb=TraceDB.new OPTS[:file], "re"
 puts (full=tdb.sample_fraction(1)).size
 puts (half=tdb.sample_fraction(0.5)).size
-puts full.sort_by {|k,v| Integer( v[:covered] ) }[0..10]
+puts full.sort_by {|k,v| Integer( v[:covered] ) }[-10..-1].map {|fn, hsh| "#{fn}-#{hsh[:covered].to_i}"}
+puts half.sort_by {|k,v| Integer( v[:covered] ) }[-10..-1].map {|fn, hsh| "#{fn}-#{hsh[:covered].to_i}"}
 
