@@ -22,7 +22,7 @@ class Set
         when 2
             bitstring='0'*(self.max+1)
             self.each {|e| bitstring[e]='1'}
-            deflated=bitstring
+            deflated=[bitstring].pack 'b*'
         when 3
             bitstring='0'*(self.max+1)
             self.each {|e| bitstring[e]='1'}
