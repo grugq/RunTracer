@@ -26,7 +26,7 @@ class TraceDB
     def sample_fraction( f )
         raise ArgumentError, "Fraction between 0 and 1" unless 0<f && f<=1
         cursor=(traces * f)-1
-        key_suffixes=@db.keys( :prefix=>"trc:" ).shuffle[0..cursor].map {|e| e.split(':').last}
+        key_suffixes=@db.keys( :prefix=>"trc:" ).shuffle[0..cursor].map {|e| e.split(':').last}.compact
         hsh={}
         key_suffixes.each {|k|
             hsh[k]={
