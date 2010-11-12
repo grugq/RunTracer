@@ -40,11 +40,9 @@ class TraceDB
 end
 
 tdb=TraceDB.new OPTS[:file], "re"
-puts (full=tdb.sample_fraction(1)).size
-puts (half=tdb.sample_fraction(0.5)).size
 
 def greedy_reduce( set_hash )
-    puts "Starting set #{set_hash.size}."
+    puts "Starting sample with #{set_hash.size} sets"
     candidates=set_hash.sort_by {|k,v| Integer( v[:covered] ) }
     minset=[]
     coverage=Set.new
@@ -56,7 +54,7 @@ def greedy_reduce( set_hash )
     best_set=Set.unpack( best_hsh[:trace] )
     coverage=coverage.union( best_set )
     global_coverage=global_coverage.union( best_set )
-    puts "Starting set #{coverage} elems"
+    puts "Initial best set #{coverage.size} elems"
 
     # strip elements from the candidates
     # This is outside the loop so we only have to expand
@@ -65,7 +63,9 @@ def greedy_reduce( set_hash )
         this_set=Set.unpack( hsh[:trace] )
         global_coverage=global_coverage.union( this_set )
         hsh[:set]=(this_set - best_set)
+        print '.'
     }
+    print "\n"
     candidates.delete_if {|fn, hsh| hsh[:set].empty? }
     candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
     best_fn, best_hsh=candidates.pop
@@ -93,8 +93,10 @@ def greedy_reduce( set_hash )
     [minset, coverage]
 end
 
-puts "FULL: #{full.size} HALF: #{half.size}"
-minset, coverage=greedy_reduce( full )
-puts "FULL Minset #{minset.size}, covers #{coverage.size}"
-minset, coverage=greedy_reduce( half )
-puts "HALF Minset #{minset.size}, covers #{coverage.size}"
+fraction=0.125
+until fraction==1 
+    this_sample=tdb.sample_fraction fraction
+    puts "FULL: #{full.size} THIS: #{this_sample.size}"
+    minset, coverage=greedy_reduce( this_sample )
+    puts "This sample Minset #{minset.size}, covers #{coverage.size}"
+end
