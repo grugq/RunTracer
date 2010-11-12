@@ -23,7 +23,7 @@ class TraceDB
     end
 
     def sample_fraction( f )
-        raise ArgumentError, "Fraction between 0 and 1" unless 0<f<=1
+        raise ArgumentError, "Fraction between 0 and 1" unless 0<f && f<=1
         cursor=(traces * f)-1
         keys=@db.keys( :prefix=>"trc:" ).shuffle[0..cursor]
         Hash[ *(keys.zip( @db.values_at( keys )).flatten) ]
