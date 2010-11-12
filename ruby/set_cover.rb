@@ -53,7 +53,7 @@ def greedy_reduce( set_hash )
     minset.push best_fn
 
     # expand the starter set
-    best_set=Set.unpack( first[:trace] )
+    best_set=Set.unpack( best_hsh[:trace] )
     coverage=coverage.union( best_set )
     global_coverage=global_coverage.union( best_set )
     puts "Starting set #{coverage} elems"
