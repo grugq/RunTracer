@@ -16,7 +16,7 @@ class Set
         return "" if self.empty?
         case compression_level
         when 0
-            deflated=Zlib::Deflate.deflate( Marshal.dump( self ) )
+            deflated=self.to_a.sort.to_msgpack
         when 1
             deflated=Zlib::Deflate.deflate( self.to_a.sort.to_msgpack )
         when 2
@@ -40,7 +40,7 @@ class Set
         end
         case Integer( compression_level )
         when 0
-            Marshal.load( Zlib::Inflate.inflate( body ) )
+            Set.new( MessagePack.unpack(body) )
         when 1
             Set.new( MessagePack.unpack(Zlib::Inflate.inflate(body)) )
         when 2

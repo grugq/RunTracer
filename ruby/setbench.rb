@@ -16,14 +16,14 @@ def bench( level, n )
     puts "Level #{level}"
     mark=Time.now
     str=S.pack( level )
-    puts "#{"%.3f" % (str.size/1024.0)}"
+    puts "#{"%.3f" % (str.size/1024.0)}KB"
     s2=Set.unpack( str, level )
     fail unless s2==S
     (n - 1).times do
         str=S.pack(level)
         s2=Set.unpack( str, level )
     end
-    puts "#{Time.now - mark}"
+    puts "Average #{(Time.now - mark)/n} secs"
 end
 
 (0..3).each {|level|
