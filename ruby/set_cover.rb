@@ -95,7 +95,7 @@ full=tdb.sample_fraction(1)
 fraction=0.125
 samples=[]
 until fraction==1 
-    samples << tdb.sample_fraction fraction
+    samples << tdb.sample_fraction( fraction )
     fraction=fraction*2
 end
 tdb.close
