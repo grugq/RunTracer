@@ -95,7 +95,6 @@ end
 
 puts "FULL: #{full.size} HALF: #{half.size}"
 minset, coverage=greedy_reduce( full )
-puts "FULL Minset #{minset.size}, covers #{coverage.size}".
+puts "FULL Minset #{minset.size}, covers #{coverage.size}"
 minset, coverage=greedy_reduce( half )
-puts "HALF Minset #{minset.size}, covers #{coverage.size}".
-
+puts "HALF Minset #{minset.size}, covers #{coverage.size}"
