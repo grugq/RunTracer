@@ -25,12 +25,21 @@ class TraceDB
     def sample_fraction( f )
         raise ArgumentError, "Fraction between 0 and 1" unless 0<f && f<=1
         cursor=(traces * f)-1
-        keys=@db.keys( :prefix=>"trc:" ).shuffle[0..cursor]
-        Hash[ *(keys.zip( @db.values_at( keys )).flatten) ]
+        key_suffixes=@db.keys( :prefix=>"trc:" ).shuffle[0..cursor].map {|e| e.split(':').last}
+        hsh={}
+        key_suffixes.each {|k|
+            hsh[k]={
+                :covered=>@db["blk:#{k}"],
+                :trace=>@db["trc:#{k}"] #still packed.
+            }
+        }
+        hsh
     end
 
 end
 
 tdb=TraceDB.new OPTS[:file], "re"
-puts tdb.sample_fraction(1).size
-puts tdb.sample_fraction(0.5).size
+puts (full=tdb.sample_fraction(1)).size
+puts (half=tdb.sample_fraction(0.5)).size
+puts full.sort_by {|k,v| Integer( v[:covered] ) }[0..10]
+
