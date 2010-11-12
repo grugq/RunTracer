@@ -8,8 +8,8 @@ require File.dirname( __FILE__ ) + '/set_extensions'
 S=Set.new
 
 puts "Generating set"
-until s.size==350_000
-    s.add rand(500_000)
+until S.size==350_000
+    S.add rand(500_000)
 end
 
 def bench( level, n )
