@@ -37,7 +37,7 @@ class StalkTraceCompressor
         debug_info "Startup done."
     end
 
-    def initialize_lookup
+    def initialize_codec
         @codec=TraceCodec.new( @opts[:lookup_file] )
     end
 
