@@ -40,6 +40,7 @@ class TraceDB
 end
 
 tdb=TraceDB.new OPTS[:file], "re"
+full=tdb.sample_fraction(1)
 
 def greedy_reduce( set_hash )
     puts "Starting sample with #{set_hash.size} sets"
