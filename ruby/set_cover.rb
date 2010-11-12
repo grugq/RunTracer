@@ -33,6 +33,7 @@ class TraceDB
                 :covered=>@db["blk:#{k}"],
                 :trace=>@db["trc:#{k}"] #still packed.
             }
+            raise "DB screwed?" unless hsh[k][:covered] && hsh[k][:trace]
         }
         hsh
     end
@@ -82,13 +83,9 @@ def greedy_reduce( set_hash )
         }
         candidates.delete_if {|fn, hsh| hsh[:set].empty? }
         candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-        begin
-            best_fn, best_hsh=candidates.pop
-            minset.push best_fn
-            best_set=best_hsh[:set]
-        rescue
-            retry
-        end
+        best_fn, best_hsh=candidates.pop
+        minset.push best_fn
+        best_set=best_hsh[:set]
         coverage=coverage.union( best_set )
     end
     raise "Bugger." unless coverage.size==global_coverage.size

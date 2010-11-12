@@ -20,7 +20,7 @@ class Set
 
     def self.unpack( str )
         return Set.new if str.empty?
-        bitstring=Zlib::Inflate.inflate( body ).unpack('b*').first
+        bitstring=Zlib::Inflate.inflate( str ).unpack('b*').first
         ary=[]
         (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
         Set.new( ary )
