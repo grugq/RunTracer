@@ -82,9 +82,13 @@ def greedy_reduce( set_hash )
         }
         candidates.delete_if {|fn, hsh| hsh[:set].empty? }
         candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-        best_fn, best_hsh=candidates.pop
-        minset.push best_fn
-        best_set=best_hsh[:set]
+        begin
+            best_fn, best_hsh=candidates.pop
+            minset.push best_fn
+            best_set=best_hsh[:set]
+        rescue
+            retry
+        end
         coverage=coverage.union( best_set )
     end
     raise "Bugger." unless coverage.size==global_coverage.size
