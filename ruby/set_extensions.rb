@@ -16,9 +16,9 @@ class Set
         return "" if self.empty?
         case compression_level
         when 0
-            deflated=Marshal.dump( self )
+            deflated=Zlib::Deflate.deflate( Marshal.dump( self ) )
         when 1
-            deflated=self.to_a.to_msgpack
+            deflated=Zlib::Deflate.deflate( self.to_a.sort.to_msgpack )
         when 2
             bitstring='0'*(self.max+1)
             self.each {|e| bitstring[e]='1'}
@@ -40,9 +40,9 @@ class Set
         end
         case Integer( compression_level )
         when 0
-            Marshal.load( body )
+            Marshal.load( Zlib::Inflate.inflate( body ) )
         when 1
-            Set.new( MessagePack.unpack(body) )
+            Set.new( MessagePack.unpack(Zlib::Inflate.inflate(body)) )
         when 2
             bitstring=body.unpack('b*').first
             ary=[]
