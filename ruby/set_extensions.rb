@@ -4,6 +4,7 @@
 # (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
 
 require 'zlib'
+require 'msgpack'
 require 'set'
 
 class Set
@@ -11,19 +12,45 @@ class Set
     # Add some packing methods to the basic Set class. This
     # dramatically reduces the space required to store Sets 
     # which are only Integers, but won't work otherwise.
-    def pack
+    def pack( compression_level=3 )
         return "" if self.empty?
-        bitstring='0'*(self.max+1)
-        self.each {|e| bitstring[e]='1'}
-        Zlib::Deflate.deflate( [bitstring].pack('b*') )
+        case compression_level
+        when 1
+            deflated=self.to_a.to_msgpack
+        when 2
+            bitstring='0'*(self.max+1)
+            self.each {|e| bitstring[e]='1'}
+            deflated=bitstring
+        when 3
+            bitstring='0'*(self.max+1)
+            self.each {|e| bitstring[e]='1'}
+            deflated=Zlib::Deflate.deflate( [bitstring].pack('b*') )
+        end
+        "#{deflated.size}:#{compression_level},#{deflated}"
     end
 
-    def self.unpack( str )
+    def self.unpack( str, compression_level=3 )
         return Set.new if str.empty?
-        bitstring=Zlib::Inflate.inflate( str ).unpack('b*').first
-        ary=[]
-        (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
-        Set.new( ary )
+        header,body=str.split(',',2)
+        size, level=header,split(':')
+        unless size==body.size
+            raise ArgumentError, "Couldn't read packed string"
+        end
+        case Integer( compression_level )
+        when 1
+            Set.new( MessagePack.unpack(body) )
+        when 2
+            bitstring=body.unpack('b*').first
+            ary=[]
+            (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
+            Set.new( ary )
+        when 3
+            bitstring=Zlib::Inflate.inflate( body ).unpack('b*').first
+            ary=[]
+            (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
+            Set.new( ary )
+        end
     end
 
 end
+
