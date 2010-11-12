@@ -23,6 +23,10 @@ class TraceDB
         @db.size/3
     end
 
+    def close
+        @db.close
+    end
+
     def sample_fraction( f )
         raise ArgumentError, "Fraction between 0 and 1" unless 0<f && f<=1
         cursor=(traces * f)-1
