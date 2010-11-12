@@ -40,8 +40,6 @@ class TraceDB
 
 end
 
-tdb=TraceDB.new OPTS[:file], "re"
-full=tdb.sample_fraction(1)
 
 def greedy_reduce( set_hash )
     puts "Starting sample with #{set_hash.size} sets"
@@ -92,11 +90,20 @@ def greedy_reduce( set_hash )
     [minset, coverage]
 end
 
+tdb=TraceDB.new OPTS[:file], "re"
+full=tdb.sample_fraction(1)
 fraction=0.125
+samples=[]
 until fraction==1 
-    this_sample=tdb.sample_fraction fraction
-    puts "FULL: #{full.size} THIS: #{this_sample.size}"
-    minset, coverage=greedy_reduce( this_sample )
-    puts "This sample Minset #{minset.size}, covers #{coverage.size}"
+    samples << tdb.sample_fraction fraction
     fraction=fraction*2
 end
+tdb.close
+puts "Collected samples, starting work"
+samples.each {|sample|
+    mark=Time.now
+    puts "FULL: #{full.size} THIS: #{sample.size}"
+    minset, coverage=greedy_reduce( sample )
+    puts "This sample Minset #{minset.size}, covers #{coverage.size}"
+    puts "Elapsed: #{Time.now - mark}"
+}
