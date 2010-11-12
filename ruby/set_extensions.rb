@@ -4,6 +4,7 @@
 # (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
 
 require 'zlib'
+require 'set'
 
 class Set
 
