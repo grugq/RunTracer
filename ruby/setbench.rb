@@ -7,7 +7,8 @@ require File.dirname( __FILE__ ) + '/set_extensions'
 
 s=Set.new
 
-until s.size=350_000
+puts "Generating set"
+until s.size==350_000
     s.add rand(500_000)
 end
 
