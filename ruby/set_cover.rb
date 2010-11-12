@@ -48,12 +48,14 @@ def greedy_reduce( set_hash )
     candidates=set_hash.sort_by {|k,v| Integer( v[:covered] ) }
     minset=[]
     coverage=Set.new
+    global_coverage=Set.new
     best_fn, best_hsh=candidates.shift
     minset.push best_fn
 
     # expand the starter set
     best_set=Set.unpack( first[:trace] )
     coverage=coverage.union( best_set )
+    global_coverage=global_coverage.union( best_set )
     puts "Starting set #{coverage} elems"
 
     # strip elements from the candidates
@@ -61,11 +63,12 @@ def greedy_reduce( set_hash )
     # the sets to full size once.
     candidates.each {|fn, hsh|
         this_set=Set.unpack( hsh[:trace] )
+        global_coverage=global_coverage.union( this_set )
         hsh[:set]=(this_set - best_set)
     }
     candidates.delete_if {|fn, hsh| hsh[:set].empty? }
     candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-    best_fn, best_hsh==candidates.shift
+    best_fn, best_hsh=candidates.shift
     minset.push best_fn
     best_set=best_hsh[:set]
     puts "Next best has #{best_set.size} elems left"
@@ -80,12 +83,13 @@ def greedy_reduce( set_hash )
         }
         candidates.delete_if {|fn, hsh| hsh[:set].empty? }
         candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-        best_fn, best_hsh==candidates.shift
+        best_fn, best_hsh=candidates.shift
         minset.push best_fn
         best_set=best_hsh[:set]
         coverage=coverage.union( best_set )
         puts "C:#{candidates.size} M:#{minset.size} ccov:#{coverage.size}"
     end
+    raise "Bugger." unless coverage.size==global_coverage.size
     [minset, coverage]
 end
 
