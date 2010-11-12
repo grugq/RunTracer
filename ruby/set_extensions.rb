@@ -15,6 +15,8 @@ class Set
     def pack( compression_level=3 )
         return "" if self.empty?
         case compression_level
+        when 0
+            deflated=Marshal.dump( self )
         when 1
             deflated=self.to_a.to_msgpack
         when 2
@@ -32,11 +34,13 @@ class Set
     def self.unpack( str, compression_level=3 )
         return Set.new if str.empty?
         header,body=str.split(',',2)
-        size, level=header,split(':')
+        size, level=header.split(':')
         unless size==body.size
             raise ArgumentError, "Couldn't read packed string"
         end
         case Integer( compression_level )
+        when 0
+            Marshal.load( body )
         when 1
             Set.new( MessagePack.unpack(body) )
         when 2

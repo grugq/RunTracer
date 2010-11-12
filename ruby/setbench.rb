@@ -12,6 +12,16 @@ until s.size==350_000
     s.add rand(500_000)
 end
 
+puts "Level 0"
+str=s.pack(0)
+puts "#{"%.3f" % (str.size/1024.0)}"
+s2=Set.unpack( str, 0 )
+fail unless s2==s
+(Integer( ARGV[0] ) - 1).times do
+    str=s.pack(0)
+    s2=Set.unpack( str, 0 )
+end
+
 puts "Level 1"
 str=s.pack(1)
 puts "#{"%.3f" % (str.size/1024.0)}"
