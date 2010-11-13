@@ -96,8 +96,7 @@ module Reductions
 
         # expand the starter set
         best_set=Set.unpack( best_hsh[:trace] )
-        coverage=coverage.union( best_set )
-        global_coverage=global_coverage.union( best_set )
+        coverage.merge best_set
         puts "Initial best set #{coverage.size} elems"
 
         # strip elements from the candidates
@@ -113,7 +112,7 @@ module Reductions
         minset.push best_fn
         best_set=best_hsh[:set]
         puts "Next best has #{best_set.size} elems left"
-        coverage=coverage.union( best_set )
+        coverage.merge best_set 
 
         # Now start the reduction loop, the Sets are expanded
         puts "Starting reduction"
@@ -127,7 +126,7 @@ module Reductions
             best_fn, best_hsh=candidates.pop
             minset.push best_fn
             best_set=best_hsh[:set]
-            coverage=coverage.union( best_set )
+            coverage.merge best_set
         end
         [minset, coverage]
     end
