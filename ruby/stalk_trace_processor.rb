@@ -16,7 +16,6 @@ class StalkTraceProcessor
     attr_reader :processed_count
 
     def initialize( servers, port, storename, debug )
-        @work_dir=work_dir
         @debug=debug
         @storename=storename
         servers=servers.map {|srv_str| "#{srv_str}:#{port}" }
