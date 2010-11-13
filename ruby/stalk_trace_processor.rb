@@ -15,7 +15,7 @@ class StalkTraceProcessor
 
     attr_reader :processed_count
 
-    def initialize( servers, port, work_dir, debug, storename="ccov" )
+    def initialize( servers, port, storename, debug )
         @work_dir=work_dir
         @debug=debug
         @storename=storename

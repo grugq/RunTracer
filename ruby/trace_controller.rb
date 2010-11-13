@@ -15,7 +15,7 @@ OPTS=Trollop::options do
     opt :untraced, "Untraced file directory", :type=>:string, :required=>:true
     opt :modules, "Show offsets for these modules (other addresses raw)", :type=>:strings
     opt :keep, "Don't overwrite existing trace results", :type=>:boolean
-    opt :output, "Output directory", :type=>:string, :required=>:true
+    opt :output, "Output file basename foo becomes foo-traces.tch", :type=>:string, :required=>:true
     opt :debug, "Enable debug output", :type=>:boolean
 end
 
