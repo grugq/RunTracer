@@ -45,42 +45,66 @@ class TraceDB
 end
 
 
-def greedy_reduce( set_hash )
-    puts "Starting sample with #{set_hash.size} sets"
-    candidates=set_hash.sort_by {|k,v| Integer( v[:covered] ) }
-    minset=[]
-    coverage=Set.new
-    global_coverage=Set.new
-    best_fn, best_hsh=candidates.pop
-    minset.push best_fn
+module Reductions
 
-    # expand the starter set
-    best_set=Set.unpack( best_hsh[:trace] )
-    coverage=coverage.union( best_set )
-    global_coverage=global_coverage.union( best_set )
-    puts "Initial best set #{coverage.size} elems"
-
-    # strip elements from the candidates
-    # This is outside the loop so we only have to expand
-    # the sets to full size once.
-    candidates.each {|fn, hsh|
-        this_set=Set.unpack( hsh[:trace] )
-        global_coverage=global_coverage.union( this_set )
-        hsh[:set]=(this_set - best_set)
-    }
-    candidates.delete_if {|fn, hsh| hsh[:set].empty? }
-    candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-    best_fn, best_hsh=candidates.pop
-    minset.push best_fn
-    best_set=best_hsh[:set]
-    puts "Next best has #{best_set.size} elems left"
-    coverage=coverage.union( best_set )
-
-    # Now start the reduction loop, the Sets are expanded
-    puts "Starting reduction"
-    until candidates.empty?
+    def iterative_reduce( set_hash )
+        puts "Starting sample with #{set_hash.size} sets"
+        candidates=set_hash.to_a.shuffle
+        minset={}
+        coverage=Set.new
+        # There are two ways into the minset.
+        # 1. Add new blocks
+        # 2. Consolidate the blocks of 2 or more existing files
+        # We're using each here, but the algorithm can be implemented
+        # iteratively as traces come in.
         candidates.each {|fn, hsh|
-            this_set=hsh[:set]
+            this_set=Set.unpack( hsh[:trace] )
+            # Do we add new blocks?
+            unless (this_set_unique=(this_set - coverage)).empty?
+                coverage.merge this_set
+                # Any old files with unique blocks that
+                # this full set covers can be deleted breakeven at worst
+                minset.delete_if {|fn, unique_blocks|
+                    unique_blocks.subset? this_set
+                }
+                minset[fn]=this_set_unique
+            else
+                # Do we consolidate 2 or more sets of unique blocks
+                double_covered=minset.select {|fn,unique_blocks|
+                    unique_blocks.subset? this_set
+                }
+                if double_covered.size > 1
+                    merged=Set.new
+                    double_covered.each {|fn,unique_blocks|
+                        merged.merge unique_blocks
+                        minset.delete fn
+                    }
+                    minset[fn]=merged
+                end
+            end
+        }
+        [minset, coverage]
+    end
+
+    def greedy_reduce( set_hash )
+        puts "Starting sample with #{set_hash.size} sets"
+        candidates=set_hash.sort_by {|k,v| Integer( v[:covered] ) }
+        minset=[]
+        coverage=Set.new
+        best_fn, best_hsh=candidates.pop
+        minset.push best_fn
+
+        # expand the starter set
+        best_set=Set.unpack( best_hsh[:trace] )
+        coverage=coverage.union( best_set )
+        global_coverage=global_coverage.union( best_set )
+        puts "Initial best set #{coverage.size} elems"
+
+        # strip elements from the candidates
+        # This is outside the loop so we only have to expand
+        # the sets to full size once.
+        candidates.each {|fn, hsh|
+            this_set=Set.unpack( hsh[:trace] )
             hsh[:set]=(this_set - best_set)
         }
         candidates.delete_if {|fn, hsh| hsh[:set].empty? }
@@ -88,10 +112,25 @@ def greedy_reduce( set_hash )
         best_fn, best_hsh=candidates.pop
         minset.push best_fn
         best_set=best_hsh[:set]
+        puts "Next best has #{best_set.size} elems left"
         coverage=coverage.union( best_set )
+
+        # Now start the reduction loop, the Sets are expanded
+        puts "Starting reduction"
+        until candidates.empty?
+            candidates.each {|fn, hsh|
+                this_set=hsh[:set]
+                hsh[:set]=(this_set - best_set)
+            }
+            candidates.delete_if {|fn, hsh| hsh[:set].empty? }
+            candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
+            best_fn, best_hsh=candidates.pop
+            minset.push best_fn
+            best_set=best_hsh[:set]
+            coverage=coverage.union( best_set )
+        end
+        [minset, coverage]
     end
-    raise "Bugger." unless coverage.size==global_coverage.size
-    [minset, coverage]
 end
 
 tdb=TraceDB.new OPTS[:file], "re"
@@ -105,9 +144,13 @@ end
 tdb.close
 puts "Collected samples, starting work"
 samples.each {|sample|
-    mark=Time.now
     puts "FULL: #{full.size} THIS: #{sample.size}"
+    mark=Time.now
     minset, coverage=greedy_reduce( sample )
-    puts "This sample Minset #{minset.size}, covers #{coverage.size}"
+    puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size}"
+    puts "Elapsed: #{Time.now - mark}"
+    mark=Time.now
+    minset, coverage=greedy_reduce( sample )
+    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size}"
     puts "Elapsed: #{Time.now - mark}"
 }
