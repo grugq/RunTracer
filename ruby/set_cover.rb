@@ -65,7 +65,7 @@ module Reductions
         minset.push best_fn
 
         # expand the starter set
-        best_set=best_hsh[:full] )
+        best_set=best_hsh[:full]
         coverage.merge best_set
         puts "Initial best set #{coverage.size} elems"
 
