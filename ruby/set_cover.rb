@@ -199,7 +199,7 @@ samples.each {|sample|
     puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size}"
     puts "Elapsed: #{Time.now - mark}"
     mark=Time.now
-    minset, coverage=greedy_refine( minset, tdb )
+    minset, coverage=greedy_refine( minset )
     puts "Iterative + Greedy Refine: This sample Minset #{minset.size}, covers #{coverage.size}"
     puts "Elapsed: #{Time.now - mark}"
 }
