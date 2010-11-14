@@ -52,15 +52,15 @@ end
 module Reductions
 
     def iterative_reduce( sample )
-        puts "Starting sample with #{sample.size} sets"
-        candidates=sample.to_a.shuffle
         minset={}
         coverage=Set.new
+        # General Algorithm
         # There are two ways into the minset.
         # 1. Add new blocks
         # 2. Consolidate the blocks of 2 or more existing files
-        # We're using each here, but the algorithm can be implemented
-        # iteratively as traces come in.
+        
+        # Not sorted, so can be applied as traces come in
+        candidates=sample.to_a.shuffle
         candidates.each {|fn, this_hsh|
             this_set=Set.unpack( this_hsh[:trace] )
             # Do we add new blocks?
@@ -93,44 +93,38 @@ module Reductions
     end
 
     def greedy_reduce( sample )
-        puts "Starting sample with #{sample.size} sets"
         minset=[]
         coverage=Set.new
-
         # General Algorithm:
         # Sort the sets by size
         # Take the best set, strip its blocks from all the others
         # Delete any candidates that are now empty
         # Repeat.
+
         candidates=sample.sort_by {|k,v| Integer( v[:covered] ) }
         best_fn, best_hsh=candidates.pop
-        minset.push best_fn
+        minset[best_fn]=best_hsh
 
         # expand the starter set
         best_set=Set.unpack( best_hsh[:trace] )
         coverage.merge best_set
-        puts "Initial best set #{coverage.size} elems"
 
         # strip elements from the candidates
         # This is outside the loop so we only have to expand
         # the sets to full size once.
         candidates.each {|fn, hsh|
-            this_set=Set.unpack( hsh[:trace] )
-            hsh[:set]=(this_set - best_set)
+            hsh[:set]=( Set.unpack(hsh[:trace]) - best_set )
         }
 
         # Now start the reduction loop, the Sets are expanded
-        puts "Starting reduction"
         until candidates.empty?
             candidates.delete_if {|fn, hsh| hsh[:set].empty? }
             candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
             best_fn, best_hsh=candidates.pop
-            minset.push best_fn
-            best_set=best_hsh[:set]
-            coverage.merge best_set 
+            minset[best_fn]=best_hsh
+            coverage.merge best_hsh[:set]
             candidates.each {|fn, hsh|
-                this_set=hsh[:set]
-                hsh[:set]=(this_set - best_set)
+                hsh[:set]=(hsh[:set] - best_hsh[:set])
             }
         end
         [minset, coverage]
@@ -146,20 +140,20 @@ until fraction > 1
     samples << tdb.sample_fraction( fraction )
     fraction=fraction*2
 end
+tdb.close
 puts "Collected samples, starting work"
 samples.each {|sample|
-    puts "FULL: #{full.size} THIS: #{sample.size}"
+    puts "Random sample of #{sample.size} from #{full.size}"
     mark=Time.now
     minset, coverage=greedy_reduce( sample )
     puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size}"
-    puts "Elapsed: #{Time.now - mark}"
+    puts "Elapsed: #{Time.now - mark} secs"
     mark=Time.now
     minset, coverage=iterative_reduce( sample )
     puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size}"
-    puts "Elapsed: #{Time.now - mark}"
+    puts "Elapsed: #{Time.now - mark} secs"
     mark=Time.now
     minset, coverage=greedy_reduce( minset )
     puts "Iterative + Greedy Refine: This sample Minset #{minset.size}, covers #{coverage.size}"
-    puts "Elapsed: #{Time.now - mark}"
+    puts "Elapsed: #{Time.now - mark} secs"
 }
-tdb.close
