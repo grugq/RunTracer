@@ -110,8 +110,8 @@ module Reductions
                 coverage.merge this_set_unique
                 # Any old files with unique blocks that
                 # this full set covers can be deleted breakeven at worst
-                minset.delete_if {|fn, unique_blocks|
-                    unique_blocks.subset? this_set
+                minset.delete_if {|fn, hsh|
+                    hsh[:unique].subset? this_set
                 }
                 minset[fn]={:unique=>this_set_unique, :full=>this_set}
             else
