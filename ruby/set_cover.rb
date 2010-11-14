@@ -103,13 +103,8 @@ module Reductions
         # Delete any candidates that are now empty
         # Repeat.
 
-        best_fn, best_hsh=nil,nil
         candidates=sample.dup
-        candidates.each {|fn, hsh|
-            if best_fn.nil? or Integer( hsh[:covered] ) > Integer(best_hsh[:covered])
-                best_fn, best_hsh=fn, hsh
-            end
-        }
+        best_fn, best_hsh=candidates.max {|a,b| a[1][:covered].to_i <=> b[1][:covered].to_i }
         minset[best_fn]=candidates.delete(best_fn)
 
         # expand the starter set
@@ -128,12 +123,7 @@ module Reductions
 
         # Now start the reduction loop, the Sets are expanded
         until candidates.empty?
-            best_fn, best_hsh=nil,nil
-            candidates.each {|fn, hsh|
-                if best_fn.nil? or hsh[:set].size > best_hsh[:set].size
-                    best_fn, best_hsh=fn, hsh
-                end
-            }
+            best_fn, best_hsh=candidates.max {|a,b| a[1][:set].size <=> b[1][:set].size }
             minset[best_fn]=candidates.delete(best_fn)
             coverage.merge best_hsh[:set]
             candidates.each {|fn, hsh|
