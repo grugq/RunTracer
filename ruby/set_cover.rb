@@ -196,6 +196,7 @@ until fraction > 1
     samples << tdb.sample_fraction( fraction )
     fraction=fraction*2
 end
+tdb.close
 puts "Collected samples, starting work"
 samples.each {|sample|
     puts "FULL: #{full.size} THIS: #{sample.size}"
@@ -212,4 +213,3 @@ samples.each {|sample|
     puts "Iterative + Greedy Refine: This sample Minset #{minset.size}, covers #{coverage.size}"
     puts "Elapsed: #{Time.now - mark}"
 }
-tdb.close
