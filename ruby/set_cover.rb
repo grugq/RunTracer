@@ -60,7 +60,7 @@ module Reductions
         minset.push best_fn
 
         # expand the starter set
-        best_set=best_hsh[:full] )
+        best_set=best_hsh[:full]
         coverage.merge best_set
         puts "Initial best set #{coverage.size} elems"
 
@@ -107,13 +107,13 @@ module Reductions
             this_set=Set.unpack( hsh[:trace] )
             # Do we add new blocks?
             unless (this_set_unique=(this_set - coverage)).empty?
-                coverage.merge this_set
+                coverage.merge this_set_unique
                 # Any old files with unique blocks that
                 # this full set covers can be deleted breakeven at worst
                 minset.delete_if {|fn, unique_blocks|
                     unique_blocks.subset? this_set
                 }
-                minset[fn]={:unique=>this_set_unique, :full=>:this_set}
+                minset[fn]={:unique=>this_set_unique, :full=>this_set}
             else
                 # Do we consolidate 2 or more sets of unique blocks?
                 double_covered=minset.select {|fn,hsh|
