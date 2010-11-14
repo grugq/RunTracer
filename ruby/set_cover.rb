@@ -52,6 +52,8 @@ end
 module Reductions
 
     def iterative_reduce( sample )
+        puts sample.class
+        puts sample.size
         minset={}
         coverage=Set.new
         # General Algorithm
@@ -94,6 +96,8 @@ module Reductions
     end
 
     def greedy_reduce( sample )
+        puts sample.class
+        puts sample.size
         minset={}
         coverage=Set.new
         # General Algorithm:
@@ -147,14 +151,11 @@ samples.each {|sample|
     puts "Random sample of #{sample.size} from #{full.size}"
     mark=Time.now
     minset, coverage=greedy_reduce( sample )
-    puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size}"
-    puts "Elapsed: #{Time.now - mark} secs"
+    puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (Time.now - mark)} secs"
     mark=Time.now
     minset, coverage=iterative_reduce( sample )
-    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size}"
-    puts "Elapsed: #{Time.now - mark} secs"
+    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (Time.now - mark)} secs"
     mark=Time.now
     minset, coverage=greedy_reduce( minset )
-    puts "Iterative + Greedy Refine: This sample Minset #{minset.size}, covers #{coverage.size}"
-    puts "Elapsed: #{Time.now - mark} secs"
+    puts "Greedy Refined Iterative: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (Time.now - mark)} secs"
 }
