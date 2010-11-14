@@ -96,6 +96,7 @@ module Reductions
     def greedy_reduce( sample )
         minset={}
         coverage=Set.new
+        global_coverage=Set.new
         # General Algorithm:
         # Sort the sets by size
         # Take the best set, strip its blocks from all the others
@@ -109,31 +110,30 @@ module Reductions
         minset[best_fn]=best_hsh
         best_set=Set.unpack( best_hsh[:trace] )
         coverage.merge best_set
+        global_coverage.merge best_set
 
         # strip elements from the candidates
         # This is outside the loop so we only have to expand
         # the sets to full size once.
         candidates.each {|fn, hsh|
-            hsh[:set]=( Set.unpack(hsh[:trace]) - best_set )
+            this_set=Set.unpack(hsh[:trace])
+            global_coverage.merge( this_set )
+            hsh[:set]=( this_set - best_set )
         }
-        candidates.delete_if {|fn, hsh| hsh[:set].empty? }
-        candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-        best_fn, best_hsh=candidates.pop
-        minset[best_fn]=best_hsh
-        coverage.merge best_hsh[:set]
 
         # Now start the reduction loop, the Sets are expanded
         until candidates.empty?
-            candidates.each {|fn, hsh|
-                hsh[:set]=(hsh[:set] - best_hsh[:set])
-            }
             candidates.delete_if {|fn, hsh| hsh[:set].empty? }
             break if candidates.empty?
             candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
             best_fn, best_hsh=candidates.pop
             minset[best_fn]=best_hsh
             coverage.merge best_hsh[:set]
+            candidates.each {|fn, hsh|
+                hsh[:set]=(hsh[:set] - best_hsh[:set])
+            }
         end
+        raise "Bugger!" unless global_coverage.size==coverage.size
         [minset, coverage]
     end
 end
