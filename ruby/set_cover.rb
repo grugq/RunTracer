@@ -156,7 +156,7 @@ samples.each {|sample|
     mark=Time.now
     minset, coverage=iterative_reduce( sample )
     stage1=Time.now - mark
-    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % stage1)} secs"
+    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % stage1} secs"
     mark=Time.now
     minset, coverage=greedy_reduce( minset )
     stage2=Time.now - mark
