@@ -190,7 +190,7 @@ end
 include Reductions
 tdb=TraceDB.new OPTS[:file], "re"
 full=tdb.sample_fraction(1)
-fraction=0.0625
+fraction=1/64.0
 samples=[]
 until fraction > 1 
     samples << tdb.sample_fraction( fraction )
