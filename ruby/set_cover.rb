@@ -111,7 +111,7 @@ module Reductions
             minset.delete_if {|fn, hsh|
                 hsh[:unique].subset? this_set
             }
-            minset[fn]={:unique=>this_set_unique, :full=>:this_set}
+            minset[fn]={:unique=>this_set_unique, :full=>this_set}
         else
             # Do we consolidate 2 or more sets of unique edges?
             double_covered=minset.select {|fn,hsh|
@@ -185,6 +185,19 @@ module Reductions
         end
         [minset, coverage]
     end
+
+    def analyze_subsets( sample )
+        sorted=sample.sort_by {|fn, hsh| hsh[:full].size}.reverse
+        n=1
+        until n > sorted.size
+            coverage=Set.new
+            sorted.slice(0,n).each {|fn, hsh|
+                coverage.merge hsh[:full]
+            }
+            puts "Best #{n} of #{sample.size} covers #{coverage}"
+            n*=2
+        end
+    end
 end
 
 include Reductions
@@ -212,4 +225,5 @@ samples.each {|sample|
     minset, coverage=greedy_refine( minset )
     puts "Iterative + Greedy Refine: This sample Minset #{minset.size}, covers #{coverage.size}"
     puts "Elapsed: #{Time.now - mark}"
+    analyze_subsets( minset )
 }
