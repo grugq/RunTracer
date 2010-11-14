@@ -61,6 +61,7 @@ module Reductions
         
         # Not sorted, so can be applied as traces come in
         candidates=sample.to_a.shuffle
+
         candidates.each {|fn, this_hsh|
             this_set=Set.unpack( this_hsh[:trace] )
             # Do we add new blocks?
@@ -93,7 +94,7 @@ module Reductions
     end
 
     def greedy_reduce( sample )
-        minset=[]
+        minset={}
         coverage=Set.new
         # General Algorithm:
         # Sort the sets by size
@@ -102,10 +103,10 @@ module Reductions
         # Repeat.
 
         candidates=sample.sort_by {|k,v| Integer( v[:covered] ) }
-        best_fn, best_hsh=candidates.pop
-        minset[best_fn]=best_hsh
 
         # expand the starter set
+        best_fn, best_hsh=candidates.pop
+        minset[best_fn]=best_hsh
         best_set=Set.unpack( best_hsh[:trace] )
         coverage.merge best_set
 
