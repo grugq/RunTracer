@@ -60,7 +60,7 @@ module Reductions
         # Get best set, add to minset
         # Remove its elements from all remaining candidate sets
         # Drop any candidates which are now empty
-        # Sort by size, repeat
+        # Sort candidate sets by size, repeat
         best_fn, best_hsh=candidates.pop
         minset.push [best_fn, best_hsh]
 
@@ -98,45 +98,40 @@ module Reductions
 
     end
 
-    def update_minset( minset, coverage, fn, hsh )
-        # There are two ways into the minset.
-        # 1. Add new edges
-        # 2. Consolidate the edges of 2 or more existing files
-        this_set=Set.unpack( hsh[:trace] )
-        # Do we add new edges?
-        unless (this_set_unique=(this_set - coverage)).empty?
-            coverage.merge this_set
-            # Any old files with unique edges that
-            # this full set covers can be deleted breakeven at worst
-            minset.delete_if {|fn, hsh|
-                hsh[:unique].subset? this_set
-            }
-            minset[fn]={:unique=>this_set_unique, :full=>this_set}
-        else
-            # Do we consolidate 2 or more sets of unique edges?
-            double_covered=minset.select {|fn,hsh|
-                hsh[:unique].subset? this_set
-            }
-            if double_covered.size > 1
-                merged=Set.new
-                double_covered.each {|fn,hsh|
-                    merged.merge hsh[:unique]
-                    minset.delete fn
-                }
-                minset[fn]={:unique=>merged, :full=>this_set}
-            end
-        end
-    end
-
     def iterative_reduce( set_hash )
         puts "Starting sample with #{set_hash.size} sets"
+        # NB: Not sorted! Simulates taking traces as they come in
         candidates=set_hash.to_a.shuffle
         minset={}
         coverage=Set.new
-        # We're using each here, but the algorithm can be implemented
-        # iteratively as traces come in.
         candidates.each {|fn, hsh|
-            update_minset( minset, coverage, fn, hsh )
+            # There are two ways into the minset.
+            # 1. Add new edges
+            # 2. Consolidate the edges of 2 or more existing files
+            this_set=Set.unpack( hsh[:trace] )
+            # Do we add new edges?
+            unless (this_set_unique=(this_set - coverage)).empty?
+                coverage.merge this_set_unique
+                # Any old files with unique edges that
+                # this full set covers can be deleted breakeven at worst
+                minset.delete_if {|fn, hsh|
+                    hsh[:unique].subset? this_set
+                }
+                minset[fn]={:unique=>this_set_unique, :full=>this_set}
+            else
+                # Do we consolidate 2 or more sets of unique edges?
+                double_covered=minset.select {|fn,hsh|
+                    hsh[:unique].subset? this_set
+                }
+                if double_covered.size > 1
+                    merged=Set.new
+                    double_covered.each {|fn,hsh|
+                        merged.merge hsh[:unique]
+                        minset.delete fn
+                    }
+                    minset[fn]={:unique=>merged, :full=>this_set}
+                end
+            end
         }
         [minset, coverage]
     end
