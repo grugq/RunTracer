@@ -155,8 +155,10 @@ samples.each {|sample|
     puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (Time.now - mark)} secs"
     mark=Time.now
     minset, coverage=iterative_reduce( sample )
-    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (Time.now - mark)} secs"
+    stage1=Time.now - mark
+    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % stage1)} secs"
     mark=Time.now
     minset, coverage=greedy_reduce( minset )
-    puts "Greedy Refined Iterative: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (Time.now - mark)} secs"
+    stage2=Time.now - mark
+    puts "Greedy Refined Iterative: This sample Minset #{minset.size}, covers #{coverage.size} #{"%.2f" % (stage1+stage2)} secs"
 }
