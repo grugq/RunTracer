@@ -103,11 +103,15 @@ module Reductions
         # Delete any candidates that are now empty
         # Repeat.
 
-        candidates=sample.sort_by {|k,v| Integer( v[:covered] ) }
+        best_fn, best_hsh=nil,nil
+        candidates.each {|fn, hsh|
+            if best_fn.nil? or Integer( hsh[:covered] ) > Integer(best_hsh[:covered])
+                best_fn, best_hsh=fn, hsh
+            end
+        }
+        minset[best_fn]=candidates.delete(best_fn)
 
         # expand the starter set
-        best_fn, best_hsh=candidates.pop
-        minset[best_fn]=best_hsh
         best_set=Set.unpack( best_hsh[:trace] )
         coverage.merge best_set
         global_coverage.merge best_set
@@ -123,14 +127,17 @@ module Reductions
 
         # Now start the reduction loop, the Sets are expanded
         until candidates.empty?
-            candidates.delete_if {|fn, hsh| hsh[:set].empty? }
-            break if candidates.empty?
-            candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
-            best_fn, best_hsh=candidates.pop
-            minset[best_fn]=best_hsh
+            best_fn, best_hsh=nil,nil
+            candidates.each {|fn, hsh|
+                if best_fn.nil? or hsh[:set].size > best_hsh[:set].size
+                    best_fn, best_hsh=fn, hsh
+                end
+            }
+            minset[best_fn]=candidates.delete(best_fn)
             coverage.merge best_hsh[:set]
             candidates.each {|fn, hsh|
                 hsh[:set]=(hsh[:set] - best_hsh[:set])
+                candidates.delete( fn ) if hsh[:set].empty?
             }
         end
         raise "Bugger!" unless global_coverage.size==coverage.size
