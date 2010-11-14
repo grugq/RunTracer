@@ -72,7 +72,11 @@ class StalkTracer
             debug_info "Elapsed time #{Time.now - mark}" if @debug
             send_result result, wt.trace_output, pdu['filename']
             wt.sweep
-            job.delete
+            begin
+                job.delete
+            rescue Beanstalk::NotFoundError
+                # timed out or something?
+            end
         rescue
             raise $!
         ensure

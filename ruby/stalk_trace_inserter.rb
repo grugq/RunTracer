@@ -40,7 +40,8 @@ class StalkTraceInserter
         debug_info "Inserting new file, size #{data.size/1024}KB"
         debug_info "Whitelisting #{modules}" unless modules.empty?
         pdu={'data'=>data, 'filename'=>filename, 'modules'=>modules}.to_msgpack
-        @stalk.put pdu, 65536, 0, 360 # 6 minute TTR
+        # These timeouts should be more flexible. TODO add them to the pdu
+        @stalk.put pdu, 65536, 0, 420 # 7 minute TTR, clients have a 5 minute trace timeout
         @inserted_count+=1
     end
 

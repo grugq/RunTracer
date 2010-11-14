@@ -194,7 +194,7 @@ module Reductions
             sorted.slice(0,n).each {|fn, hsh|
                 coverage.merge hsh[:full]
             }
-            puts "Best #{n} of #{sample.size} covers #{coverage}"
+            puts "Best #{n} of #{sample.size} covers #{coverage.size}"
             n*=2
         end
     end
