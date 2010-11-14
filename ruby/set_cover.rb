@@ -52,8 +52,6 @@ end
 module Reductions
 
     def iterative_reduce( sample )
-        puts sample.class
-        puts sample.size
         minset={}
         coverage=Set.new
         # General Algorithm
@@ -96,8 +94,6 @@ module Reductions
     end
 
     def greedy_reduce( sample )
-        puts sample.class
-        puts sample.size
         minset={}
         coverage=Set.new
         # General Algorithm:
@@ -120,17 +116,22 @@ module Reductions
         candidates.each {|fn, hsh|
             hsh[:set]=( Set.unpack(hsh[:trace]) - best_set )
         }
+        candidates.delete_if {|fn, hsh| hsh[:set].empty? }
+        candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
+        best_fn, best_hsh=candidates.pop
+        minset[best_fn]=best_hsh
+        coverage.merge best_hsh[:set]
 
         # Now start the reduction loop, the Sets are expanded
         until candidates.empty?
+            candidates.each {|fn, hsh|
+                hsh[:set]=(hsh[:set] - best_hsh[:set])
+            }
             candidates.delete_if {|fn, hsh| hsh[:set].empty? }
             candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
             best_fn, best_hsh=candidates.pop
             minset[best_fn]=best_hsh
             coverage.merge best_hsh[:set]
-            candidates.each {|fn, hsh|
-                hsh[:set]=(hsh[:set] - best_hsh[:set])
-            }
         end
         [minset, coverage]
     end
