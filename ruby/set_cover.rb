@@ -67,14 +67,14 @@ module Reductions
                 # Any old files with unique blocks that
                 # this full set covers can be deleted breakeven at worst
                 minset.delete_if {|fn, hsh|
-                    hsh[:unique].subset? this_set
+                    hsh[:unique].proper_subset? this_set
                 }
                 this_hsh[:unique]=this_set_unique
                 minset[fn]=this_hsh
             else
                 # Do we consolidate 2 or more sets of unique blocks?
                 double_covered=minset.select {|fn,hsh|
-                    hsh[:unique].subset? this_set
+                    hsh[:unique].proper_subset? this_set
                 }
                 if double_covered.size > 1
                     merged=Set.new
