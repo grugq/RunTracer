@@ -128,6 +128,7 @@ module Reductions
                 hsh[:set]=(hsh[:set] - best_hsh[:set])
             }
             candidates.delete_if {|fn, hsh| hsh[:set].empty? }
+            break if candidates.empty?
             candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
             best_fn, best_hsh=candidates.pop
             minset[best_fn]=best_hsh
