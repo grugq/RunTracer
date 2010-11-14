@@ -117,7 +117,7 @@ module Reductions
             global_coverage.merge( this_set )
             hsh[:set]=( this_set - best_set )
         }
-        candidates.delete_if {|fn.hsh| hsh[:set].empty?}
+        candidates.delete_if {|fn,hsh| hsh[:set].empty?}
 
         # Now start the reduction loop, the Sets are expanded
         until candidates.empty?
@@ -127,7 +127,7 @@ module Reductions
             candidates.each {|fn, hsh|
                 hsh[:set]=(hsh[:set] - best_hsh[:set])
             }
-            candidates.delete_if {|fn.hsh| hsh[:set].empty?}
+            candidates.delete_if {|fn,hsh| hsh[:set].empty?}
         end
         raise "Bugger!" unless global_coverage.size==coverage.size
         [minset, coverage]
