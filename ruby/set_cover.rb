@@ -58,15 +58,12 @@ module Reductions
         # There are two ways into the minset.
         # 1. Add new blocks
         # 2. Consolidate the blocks of 2 or more existing files
-        
-        # Not sorted, so can be applied as traces come in
-        candidates=sample.to_a.shuffle
 
-        candidates.each {|fn, this_hsh|
+        sample.each {|fn, this_hsh|
             this_set=Set.unpack( this_hsh[:trace] )
             # Do we add new blocks?
             unless (this_set_unique=(this_set - coverage)).empty?
-                coverage.merge this_set_unique
+                coverage.merge this_set
                 # Any old files with unique blocks that
                 # this full set covers can be deleted breakeven at worst
                 minset.delete_if {|fn, hsh|
@@ -120,6 +117,7 @@ module Reductions
             global_coverage.merge( this_set )
             hsh[:set]=( this_set - best_set )
         }
+        candidates.delete_if {|fn.hsh| hsh[:set].empty?}
 
         # Now start the reduction loop, the Sets are expanded
         until candidates.empty?
@@ -128,8 +126,8 @@ module Reductions
             coverage.merge best_hsh[:set]
             candidates.each {|fn, hsh|
                 hsh[:set]=(hsh[:set] - best_hsh[:set])
-                candidates.delete( fn ) if hsh[:set].empty?
             }
+            candidates.delete_if {|fn.hsh| hsh[:set].empty?}
         end
         raise "Bugger!" unless global_coverage.size==coverage.size
         [minset, coverage]
@@ -153,11 +151,11 @@ samples.each {|sample|
     minset, coverage=greedy_reduce( sample )
     puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (Time.now - mark)} secs"
     mark=Time.now
-    minset, coverage=iterative_reduce( sample )
+    minset2, coverage2=iterative_reduce( sample )
     stage1=Time.now - mark
-    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % stage1} secs"
+    puts "Iterative: This sample Minset #{minset2.size}, covers #{coverage2.size} - #{"%.2f" % stage1} secs"
     mark=Time.now
-    minset, coverage=greedy_reduce( minset )
+    minset3, coverage3=greedy_reduce( minset2 )
     stage2=Time.now - mark
-    puts "Greedy Refined Iterative: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (stage1+stage2)} secs"
+    puts "Greedy Refined Iterative: This sample Minset #{minset3.size}, covers #{coverage3.size} - #{"%.2f" % (stage1+stage2)} secs"
 }
