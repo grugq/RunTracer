@@ -52,7 +52,7 @@ end
 module Reductions
 
     def greedy_refine( set_hsh )
-        puts "Starting sample with #{set_hash.size} sets"
+        puts "Starting sample with #{set_hsh.size} sets"
         candidates=set_hsh.sort_by {|k,v| v[:full].size }
         minset=[]
         coverage=Set.new
