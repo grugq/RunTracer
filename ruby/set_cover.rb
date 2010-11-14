@@ -62,7 +62,7 @@ module Reductions
         # Drop any candidates which are now empty
         # Sort by size, repeat
         best_fn, best_hsh=candidates.pop
-        minset.push best_fn
+        minset.push [best_fn, best_hsh]
 
         # expand the starter set
         best_set=best_hsh[:full]
@@ -75,7 +75,7 @@ module Reductions
         candidates.delete_if {|fn, hsh| hsh[:set].empty? }
         candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
         best_fn, best_hsh=candidates.pop
-        minset.push best_fn
+        minset.push [best_fn, best_hsh]
         best_set=best_hsh[:set]
         puts "Next best has #{best_set.size} elems left"
         coverage.merge best_set 
@@ -90,7 +90,7 @@ module Reductions
             candidates.delete_if {|fn, hsh| hsh[:set].empty? }
             candidates=candidates.sort_by {|fn, hsh| hsh[:set].size }
             best_fn, best_hsh=candidates.pop
-            minset.push best_fn
+            minset.push [best_fn, best_hsh]
             best_set=best_hsh[:set]
             coverage.merge best_set
         end
