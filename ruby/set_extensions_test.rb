@@ -24,7 +24,7 @@ class Set
             self.each {|e| bitstring[e]='1'}
             deflated=[bitstring].pack 'b*'
         when 3 
-            deflated=Zlib::Deflate.deflate( self.to_a.pack('w*') )
+            deflated=Zlib::Deflate.deflate( self.to_a.sort.pack('w*') )
         when 4
             bitstring='0'*(self.max+1)
             self.each {|e| bitstring[e]='1'}
