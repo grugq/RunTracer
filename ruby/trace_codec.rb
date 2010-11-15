@@ -50,8 +50,8 @@ class TraceCodec
     end
 
     def trace_to_set( trace_ary )
-        set=Set.new( output )
-        raise "#{PREFIX}: Set size should match Array size!" unless set.size==output.size
+        set=Set.new( trace_ary )
+        raise "#{PREFIX}: Set size should match Array size!" unless set.size==trace_ary.size
         debug_info "#{set.size} elements in Set"
     end
 
