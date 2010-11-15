@@ -53,6 +53,7 @@ class TraceCodec
         set=Set.new( trace_ary )
         raise "#{PREFIX}: Set size should match Array size!" unless set.size==trace_ary.size
         debug_info "#{set.size} elements in Set"
+        set
     end
 
     def unpack_set( packed_set )
