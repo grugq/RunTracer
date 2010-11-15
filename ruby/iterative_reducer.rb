@@ -35,6 +35,7 @@ class IterativeReducer
         @debug=@opts[:debug]
         @processed=0
         @loghandle=File.open( "ir.log", "wb+" ) # quick hack
+        @loghandle.sync=true
         @coverage=Set.new
         @reduced={}
         servers=@opts[:beanstalk_servers].map {|srv_str| "#{srv_str}:#{@opts[:beanstalk_port]}" }
