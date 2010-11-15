@@ -24,7 +24,7 @@ class StalkTraceProcessor
         debug_info "Opened database..."
         @processed_count=0
         @stalk=Beanstalk::Pool.new servers
-        @stalk.watch 'compressed'
+        @stalk.watch 'reduced'
     end
 
     def setup_store
@@ -54,16 +54,12 @@ class StalkTraceProcessor
 
     def process_next
         debug_info "getting next trace"
-        job=@stalk.reserve # from 'compressed' tube
+        job=@stalk.reserve # from 'reduced' tube
         pdu=MessagePack.unpack( job.body )
         debug_info "Saving trace of #{pdu['filename']}@#{"%.2f" % (pdu['packed'].size/1024.0)}KB -- #{pdu['covered']} blocks (#{pdu['result']})"
         save_trace pdu['filename'], pdu['packed'], pdu['covered'], pdu['result'] 
         job.delete
         @processed_count+=1
-    rescue
-        p pdu['covered']
-        p pdu['packed'][0..100]
-        raise $!
     end
 
 end

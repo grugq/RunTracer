@@ -65,13 +65,14 @@ module Reductions
         sample.each {|fn, this_hsh|
             this_set=Set.unpack( this_hsh[:trace] )
             global_coverage.merge this_set if DEBUG
-            # Do we add new blocks?
             unless this_set.subset? coverage
+                # Do we add new blocks?
                 this_set_unique=(this_set - coverage)
                 coverage.merge this_set_unique
                 # Any old files with unique blocks that
-                # this full set covers can be deleted breakeven at worst
-                # and its unique blocks added to those of this set
+                # are covered by this set can be deleted 
+                # and their unique blocks merged with those of this set
+                # (this is breakeven at worst)
                 minset.delete_if {|fn, hsh|
                     this_set_unique.merge( hsh[:unique] ) if hsh[:unique].subset?( this_set ) 
                 }
@@ -105,8 +106,9 @@ module Reductions
         coverage=Set.new
         global_coverage=Set.new if DEBUG
         # General Algorithm:
-        # Sort the sets by size
-        # Take the best set, strip its blocks from all the others
+        # Sort the candidate sets by size
+        # Add the best set to the minset
+        # strip its blocks from all the remaining candidates
         # Delete any candidates that are now empty
         # Repeat.
 

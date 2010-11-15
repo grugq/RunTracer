@@ -23,22 +23,7 @@ class TraceCodec
         @lookup.close
     end
 
-    def compress_trace( trace_ary )
-        set=create_set_from trace_ary
-        covered=set.size
-        packed=set.pack
-        debug_info "Compressed trace with #{covered} blocks to #{"%.2f" % (packed.size/1024.0)}KB"
-        [covered, packed]
-    end
-
-    def decompress_trace( packed_trace )
-        set=Set.unpack packed_trace
-        inflate! set
-    end
-
-    private
-
-    def deflate!( set )
+    def deflate_set( trace_set)
         # Single thread / core only!
         cur=@lookup.size/2
         cached={}
@@ -57,7 +42,24 @@ class TraceCodec
         set
     end
 
-    def inflate! set
+    def pack_set( deflated_set )
+        covered=set.size
+        packed=set.pack
+        debug_info "Compressed trace with #{covered} blocks to #{"%.2f" % (packed.size/1024.0)}KB"
+        [covered, packed]
+    end
+
+    def trace_to_set( trace_ary )
+        set=Set.new( output )
+        raise "#{PREFIX}: Set size should match Array size!" unless set.size==output.size
+        debug_info "#{set.size} elements in Set"
+    end
+
+    def unpack_set( packed_set )
+        Set.unpack( packed_set )
+    end
+
+    def inflate_set( trace_set )
         set.map! {|elem|
             @lookup[elem]
         }
@@ -65,13 +67,6 @@ class TraceCodec
 
     def debug_info( str )
         warn "#{PREFIX}: #{str}" if @debug
-    end
-
-    def create_set_from( output )
-        set=Set.new( output )
-        raise "#{PREFIX}: Set size should match Array size!" unless set.size==output.size
-        debug_info "#{set.size} elements in Set"
-        deflate! set
     end
 
 end

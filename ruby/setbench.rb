@@ -3,7 +3,7 @@
 # License: The MIT License
 # (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
 
-require File.dirname( __FILE__ ) + '/set_extensions'
+require File.dirname( __FILE__ ) + '/set_extensions_test'
 
 S=Set.new
 
@@ -26,6 +26,6 @@ def bench( level, n )
     puts "Average #{(Time.now - mark)/n} secs"
 end
 
-(0..3).each {|level|
+(0..4).each {|level|
     bench( level, ARGV[0].to_i )
 }

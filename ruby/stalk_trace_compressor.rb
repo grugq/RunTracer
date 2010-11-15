@@ -50,10 +50,12 @@ class StalkTraceCompressor
         job=@stalk.reserve # from 'traced' tube
         message=MessagePack.unpack( job.body )
         debug_info "compressing trace"
-        covered, packed=@codec.compress_trace( message['trace_output'] ) 
+        deflated=@codec.deflate_set( @codec.set_to_trace(message['trace_output']) )
+        covered, packed=@codec.pack_set( deflated )
         response={
             'covered'=>covered,
-            'packed'=>packed, 
+            'packed'=>packed, # this is for insertion into the DB
+            'deflated'=>deflated.to_a.to_msgpack, # this will get used by the iterative reducer
             'filename'=>message['filename'], 
             'result'=>message['result']
         }.to_msgpack
