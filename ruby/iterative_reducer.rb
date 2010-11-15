@@ -34,6 +34,8 @@ class IterativeReducer
         @opts=DEFAULTS.merge( opt_hsh )
         @debug=@opts[:debug]
         @processed=0
+        @coverage=Set.new
+        @reduced={}
         servers=@opts[:beanstalk_servers].map {|srv_str| "#{srv_str}:#{@opts[:beanstalk_port]}" }
         debug_info "Starting up, connecting to #{@opts[:beanstalk_servers].join(' ')}"
         @stalk=Beanstalk::Pool.new servers
