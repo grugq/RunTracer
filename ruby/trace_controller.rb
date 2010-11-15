@@ -41,7 +41,7 @@ trap("INT") {
 Thread.new do
     begin
         Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
-            iterpi.update( File.basename( fname, ".doc" ) if OPTS[:pi]
+            iterpi.update( File.basename(fname, ".doc") ) if OPTS[:pi]
             if OPTS[:keep]
                 if processor.has_file? File.basename( fname )
                     print '.' if OPTS[:debug]
