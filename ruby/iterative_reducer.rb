@@ -113,7 +113,7 @@ class IterativeReducer
         debug_info "getting next trace"
         job=@stalk.reserve # from 'compressed' tube
         message=MessagePack.unpack( job.body )
-        deflated=Set.new( MessagePack.unpack( message['deflated'] )
+        deflated=Set.new( MessagePack.unpack(message['deflated']) )
         debug_info "Updating reduced"
         update_reduced( deflated, message['filename'])
         message.delete 'deflated'
