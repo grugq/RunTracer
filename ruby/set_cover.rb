@@ -51,6 +51,14 @@ end
 
 module Reductions
 
+    def get_coverage( sample )
+        coverage=Set.new
+        sample.each {|fn, this_hsh|
+            coverage.merge( Set.unpack(this_hsh[:trace]) )
+        }
+        coverage
+    end
+
     def iterative_reduce( sample )
         minset={}
         coverage=Set.new
@@ -87,6 +95,10 @@ module Reductions
                 end
             end
         }
+        #double check
+        unless get_coverage( minset ).size==coverage.size
+            raise "Missing coverage in iterative reduce!"
+        end
         [minset, coverage]
     end
 
@@ -147,9 +159,9 @@ tdb.close
 puts "Collected samples, starting work"
 samples.each {|sample|
     puts "Random sample of #{sample.size} from #{full.size}"
-    mark=Time.now
-    minset, coverage=greedy_reduce( sample )
-    puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (Time.now - mark)} secs"
+    #mark=Time.now
+    #minset, coverage=greedy_reduce( sample )
+    #puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (Time.now - mark)} secs"
     mark=Time.now
     minset2, coverage2=iterative_reduce( sample )
     stage1=Time.now - mark
