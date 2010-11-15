@@ -27,7 +27,7 @@ class TraceCodec
         # Single thread / core only!
         cur=@lookup.size/2
         cached={}
-        set.map! {|elem|
+        trace_set.map! {|elem|
             unless (idx=@lookup[elem]) #already there
                 raise "#{PREFIX}: Needed read/write access to deflate" if @lookup.read_only?
                 cur+=1
@@ -39,7 +39,7 @@ class TraceCodec
             end
         }
         @lookup.update cached unless cached.empty?
-        set
+        trace_set
     end
 
     def pack_set( deflated_set )
@@ -60,7 +60,7 @@ class TraceCodec
     end
 
     def inflate_set( trace_set )
-        set.map! {|elem|
+        trace_set.map! {|elem|
             @lookup[elem]
         }
     end
