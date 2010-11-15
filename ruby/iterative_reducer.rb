@@ -34,6 +34,7 @@ class IterativeReducer
         @opts=DEFAULTS.merge( opt_hsh )
         @debug=@opts[:debug]
         @processed=0
+        @loghandle=File.open( "ir.log", "wb+" ) # quick hack
         @coverage=Set.new
         @reduced={}
         servers=@opts[:beanstalk_servers].map {|srv_str| "#{srv_str}:#{@opts[:beanstalk_port]}" }
@@ -52,6 +53,7 @@ class IterativeReducer
 
     def close
         @backup.close
+        @loghandle.close
     end
 
     def coverage
@@ -122,6 +124,7 @@ class IterativeReducer
         @stalk.put message.to_msgpack #into 'reduced' tube
         @processed+=1
         debug_info "Finished. Reduced Set: #{reduced_size} Total Cov: #{coverage}, Rolling Avg: #{rolling_average}, Processed: #{@processed}"
+        @loghandle.puts "#{reduced_size},#{coverage},#{rolling_average},#{@processed}"
         job.delete
     end
 
