@@ -51,17 +51,10 @@ end
 
 module Reductions
 
-    def get_coverage( sample )
-        coverage=Set.new
-        sample.each {|fn, this_hsh|
-            coverage.merge( Set.unpack(this_hsh[:trace]) )
-        }
-        coverage
-    end
-
     def iterative_reduce( sample )
         minset={}
         coverage=Set.new
+        global_coverage=Set.new
         # General Algorithm
         # There are two ways into the minset.
         # 1. Add new blocks
@@ -69,20 +62,23 @@ module Reductions
 
         sample.each {|fn, this_hsh|
             this_set=Set.unpack( this_hsh[:trace] )
+            global_coverage.merge this_set
             # Do we add new blocks?
-            unless (this_set_unique=(this_set - coverage)).empty?
-                coverage.merge this_set
+            unless this_set.subset? coverage
+                this_set_unique=(this_set - coverage)
+                coverage.merge this_set_unique
                 # Any old files with unique blocks that
                 # this full set covers can be deleted breakeven at worst
+                # and its unique blocks added to those of this set
                 minset.delete_if {|fn, hsh|
-                    hsh[:unique].proper_subset? this_set
+                    this_set_unique.merge( hsh[:unique] ) if hsh[:unique].subset?( this_set ) 
                 }
                 this_hsh[:unique]=this_set_unique
                 minset[fn]=this_hsh
             else
                 # Do we consolidate 2 or more sets of unique blocks?
                 double_covered=minset.select {|fn,hsh|
-                    hsh[:unique].proper_subset? this_set
+                    hsh[:unique].subset? this_set
                 }
                 if double_covered.size > 1
                     merged=Set.new
@@ -96,7 +92,7 @@ module Reductions
             end
         }
         #double check
-        unless get_coverage( minset ).size==coverage.size
+        unless global_coverage.size==coverage.size
             raise "Missing coverage in iterative reduce!"
         end
         [minset, coverage]
@@ -141,7 +137,9 @@ module Reductions
             }
             candidates.delete_if {|fn,hsh| hsh[:set].empty?}
         end
-        raise "Bugger!" unless global_coverage.size==coverage.size
+        unless global_coverage.size==coverage.size
+            raise "Missing coverage in greedy reduce!"
+        end
         [minset, coverage]
     end
 end
