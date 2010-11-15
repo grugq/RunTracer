@@ -51,7 +51,7 @@ class Set
             (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
             Set.new( ary )
         when 3
-            Set.new( Zlib::Inflate.inflate(body.unpack('w*')) )
+            Set.new( Zlib::Inflate.inflate(body).unpack('w*') )
         when 4
             bitstring=Zlib::Inflate.inflate( body ).unpack('b*').first
             ary=[]
