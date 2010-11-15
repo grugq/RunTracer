@@ -8,6 +8,7 @@ require 'rubygems'
 require 'trollop'
 require File.dirname( __FILE__ ) + '/stalk_trace_inserter'
 require File.dirname( __FILE__ ) + '/stalk_trace_processor'
+require File.dirname( __FILE__ ) + '/iterpi'
 
 OPTS=Trollop::options do
     opt :port, "Port to connect to", :type=>:integer, :default=>11300
@@ -15,6 +16,7 @@ OPTS=Trollop::options do
     opt :untraced, "Untraced file directory", :type=>:string, :required=>:true
     opt :modules, "Show offsets for these modules (other addresses raw)", :type=>:strings
     opt :keep, "Don't overwrite existing trace results", :type=>:boolean
+    opt :pi, "Calculate Pi.", :type=>:boolean
     opt :output, "Output file basename foo becomes foo-traces.tch", :type=>:string, :required=>:true
     opt :debug, "Enable debug output", :type=>:boolean
 end
@@ -26,14 +28,20 @@ Thread.abort_on_exception=true
 # Objects shared between the two threads. No need for Mutex.
 inserter=StalkTraceInserter.new( OPTS[:servers], OPTS[:port], OPTS[:debug] )
 processor=StalkTraceProcessor.new( OPTS[:servers], OPTS[:port], OPTS[:output], OPTS[:debug] )
+iterpi=IterPi.new if OPTS[:pi]
 queue_size=0
 
-trap("INT") { processor.close_databases; exit }
+trap("INT") { 
+    processor.close_databases 
+    puts "Pi is #{iterpi.pi}" if OPTS[:pi]
+    exit 
+}
 
 # Insert files in this thread
 Thread.new do
     begin
         Dir.glob( File.join(File.expand_path(OPTS[:untraced]), "*.doc"), File::FNM_DOTMATCH ).each {|fname|
+            iterpi.update( File.basename( fname, ".doc" ) if OPTS[:pi]
             if OPTS[:keep]
                 if processor.has_file? File.basename( fname )
                     print '.' if OPTS[:debug]
