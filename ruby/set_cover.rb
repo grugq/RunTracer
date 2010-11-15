@@ -51,10 +51,12 @@ end
 
 module Reductions
 
+    DEBUG=false
+
     def iterative_reduce( sample )
         minset={}
         coverage=Set.new
-        global_coverage=Set.new
+        global_coverage=Set.new if DEBUG
         # General Algorithm
         # There are two ways into the minset.
         # 1. Add new blocks
@@ -62,7 +64,7 @@ module Reductions
 
         sample.each {|fn, this_hsh|
             this_set=Set.unpack( this_hsh[:trace] )
-            global_coverage.merge this_set
+            global_coverage.merge this_set if DEBUG
             # Do we add new blocks?
             unless this_set.subset? coverage
                 this_set_unique=(this_set - coverage)
@@ -92,7 +94,7 @@ module Reductions
             end
         }
         #double check
-        unless global_coverage.size==coverage.size
+        if DEBUG && global_coverage.size!=coverage.size
             raise "Missing coverage in iterative reduce!"
         end
         [minset, coverage]
@@ -101,7 +103,7 @@ module Reductions
     def greedy_reduce( sample )
         minset={}
         coverage=Set.new
-        global_coverage=Set.new
+        global_coverage=Set.new if DEBUG
         # General Algorithm:
         # Sort the sets by size
         # Take the best set, strip its blocks from all the others
@@ -115,14 +117,14 @@ module Reductions
         # expand the starter set
         best_set=Set.unpack( best_hsh[:trace] )
         coverage.merge best_set
-        global_coverage.merge best_set
+        global_coverage.merge best_set if DEBUG
 
         # strip elements from the candidates
         # This is outside the loop so we only have to expand
         # the sets to full size once.
         candidates.each {|fn, hsh|
             this_set=Set.unpack(hsh[:trace])
-            global_coverage.merge( this_set )
+            global_coverage.merge( this_set ) if DEBUG
             hsh[:set]=( this_set - best_set )
         }
         candidates.delete_if {|fn,hsh| hsh[:set].empty?}
@@ -137,7 +139,7 @@ module Reductions
             }
             candidates.delete_if {|fn,hsh| hsh[:set].empty?}
         end
-        unless global_coverage.size==coverage.size
+        if DEBUG && global_coverage.size!=coverage.size
             raise "Missing coverage in greedy reduce!"
         end
         [minset, coverage]
@@ -157,15 +159,15 @@ tdb.close
 puts "Collected samples, starting work"
 samples.each {|sample|
     puts "Random sample of #{sample.size} from #{full.size}"
-    #mark=Time.now
-    #minset, coverage=greedy_reduce( sample )
-    #puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (Time.now - mark)} secs"
     mark=Time.now
-    minset2, coverage2=iterative_reduce( sample )
+    minset, coverage=greedy_reduce( sample )
+    puts "Greedy: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (Time.now - mark)} secs"
+    mark=Time.now
+    minset, coverage=iterative_reduce( sample )
     stage1=Time.now - mark
-    puts "Iterative: This sample Minset #{minset2.size}, covers #{coverage2.size} - #{"%.2f" % stage1} secs"
+    puts "Iterative: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % stage1} secs"
     mark=Time.now
-    minset3, coverage3=greedy_reduce( minset2 )
+    minset, coverage=greedy_reduce( minset )
     stage2=Time.now - mark
-    puts "Greedy Refined Iterative: This sample Minset #{minset3.size}, covers #{coverage3.size} - #{"%.2f" % (stage1+stage2)} secs"
+    puts "Greedy Refined Iterative: This sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (stage1+stage2)} secs"
 }
