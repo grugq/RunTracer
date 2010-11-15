@@ -43,8 +43,8 @@ class TraceCodec
     end
 
     def pack_set( deflated_set )
-        covered=set.size
-        packed=set.pack
+        covered=deflated_set.size
+        packed=deflated_set.pack
         debug_info "Compressed trace with #{covered} blocks to #{"%.2f" % (packed.size/1024.0)}KB"
         [covered, packed]
     end
