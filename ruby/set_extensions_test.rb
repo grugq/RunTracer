@@ -7,11 +7,11 @@ require 'zlib'
 require 'msgpack'
 require 'set'
 
+# Tests to try and find comfortable points on the time / space curve for
+# packing Sets.
+
 class Set
 
-    # Add some packing methods to the basic Set class. This
-    # dramatically reduces the space required to store Sets 
-    # which are only Integers, but won't work otherwise.
     def pack( compression_level=4 )
         return "" if self.empty?
         case compression_level
@@ -51,7 +51,7 @@ class Set
             (0...bitstring.size).each {|idx| ary << idx if bitstring[idx]==?1}
             Set.new( ary )
         when 3
-            Set.new( Zlib::Inflate(body.unpack('w*')) )
+            Set.new( Zlib::Inflate.inflate(body.unpack('w*')) )
         when 4
             bitstring=Zlib::Inflate.inflate( body ).unpack('b*').first
             ary=[]
