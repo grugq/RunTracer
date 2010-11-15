@@ -50,7 +50,7 @@ class StalkTraceCompressor
         job=@stalk.reserve # from 'traced' tube
         message=MessagePack.unpack( job.body )
         debug_info "compressing trace"
-        deflated=@codec.deflate_set( @codec.set_to_trace(message['trace_output']) )
+        deflated=@codec.deflate_set( @codec.trace_to_set(message['trace_output']) )
         covered, packed=@codec.pack_set( deflated )
         response={
             'covered'=>covered,
