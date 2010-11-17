@@ -1,4 +1,4 @@
-Prospector - Ruby tools for distributed tracing and analysis
+#Prospector - Ruby tools for distributed tracing and analysis
 
 #Prerequisites:
 
@@ -18,12 +18,12 @@ Prospector - Ruby tools for distributed tracing and analysis
 * Option parsing
     gem install trollop
 
-Infrastructure
+###Infrastructure
 
 Please google for latest packages and download sites.
 
-Tokyo Cabinet
-Beanstalkd
+* Tokyo Cabinet
+* Beanstalkd
 
 ##Client Side ( tested on XPSP3 )
 
