@@ -3,67 +3,59 @@
 # License: The MIT License
 # (See README.TXT or http://www.opensource.org/licenses/mit-license.php for details.)
 
-require 'rubygems'
-require 'trollop'
 require File.dirname( __FILE__ ) + '/set_extensions'
-
-OPTS=Trollop::options do
-    opt :tracedb, "Trace DB file to use", :type=>:string, :default=>"ccov-traces.tch"
-    opt :infile, "File containing filenames of traces to reduce, one per line", :type=>:string
-    opt :outfile, "Filename to use for output", :type=>:string
-end
-
-class TraceDB
-
-    def initialize( fname, mode )
-        @db=OklahomaMixer.open fname, mode
-        raise "Err, unexpected size for SetDB" unless @db.size%3==0
-    end
-
-    def traces
-        @db.size/3
-    end
-
-    def close
-        @db.close
-    end
-
-    def sample_fraction( f )
-        raise ArgumentError, "Fraction between 0 and 1" unless 0<f && f<=1
-        cursor=(traces * f)-1
-        key_suffixes=@db.keys( :prefix=>"trc:" ).shuffle[0..cursor].map {|e| e.split(':').last}.compact
-        hsh={}
-        key_suffixes.each {|k|
-            hsh[k]={
-                :covered=>@db["blk:#{k}"],
-                :trace=>@db["trc:#{k}"] #still packed.
-            }
-            raise "DB screwed?" unless hsh[k][:covered] && hsh[k][:trace]
-        }
-        hsh
-    end
-
-    def get_trace( filename )
-        hsh={}
-        hsh[k]={
-            :covered=>@db["blk:#{filename}"],
-            :trace=>@db["trc:#{filename}"] #still packed.
-        }
-        raise "DB screwed?" unless hsh[k][:covered] && hsh[k][:trace]
-        }
-        hsh
-    end
-
-    def method_missing meth, *args
-        @db.send meth, *args
-    end
-
-end
-
 
 module Reductions
 
     DEBUG=false
+
+    def iterative_reduce( sample )
+        minset={}
+        coverage=Set.new
+        global_coverage=Set.new if DEBUG
+        # General Algorithm
+        # There are two ways into the minset.
+        # 1. Add new blocks
+        # 2. Consolidate the blocks of 2 or more existing files
+
+        sample.each {|fn, this_hsh|
+            this_set=Set.unpack( this_hsh[:trace] )
+            global_coverage.merge this_set if DEBUG
+            unless this_set.subset? coverage
+                # Do we add new blocks?
+                this_set_unique=(this_set - coverage)
+                coverage.merge this_set_unique
+                # Any old files with unique blocks that
+                # are covered by this set can be deleted 
+                # and their unique blocks merged with those of this set
+                # (this is breakeven at worst)
+                minset.delete_if {|fn, hsh|
+                    this_set_unique.merge( hsh[:unique] ) if hsh[:unique].subset?( this_set ) 
+                }
+                this_hsh[:unique]=this_set_unique
+                minset[fn]=this_hsh
+            else
+                # Do we consolidate 2 or more sets of unique blocks?
+                double_covered=minset.select {|fn,hsh|
+                    hsh[:unique].subset? this_set
+                }
+                if double_covered.size > 1
+                    merged=Set.new
+                    double_covered.each {|fn,hsh|
+                        merged.merge hsh[:unique]
+                        minset.delete fn
+                    }
+                    this_hsh[:unique]=merged
+                    minset[fn]=this_hsh
+                end
+            end
+        }
+        #double check
+        if DEBUG && global_coverage.size!=coverage.size
+            raise "Missing coverage in iterative reduce!"
+        end
+        [minset, coverage]
+    end
 
     def greedy_reduce( sample )
         minset={}
@@ -110,22 +102,5 @@ module Reductions
         end
         [minset, coverage]
     end
-end
 
-include Reductions
-tdb=TraceDB.new OPTS[:tracedb], "re"
-files=File.open( OPTS[:infile], "rb" ) {|io| io.read}.split("\n")
-sample={}
-files.each {|fn|
-    sample.merge! tdb.get_trace( fn )
-}
-raise "Barf" unless sample.size==tdb.traces
-puts "Greedy reducing #{sample.size} from #{tdb.traces}"
-mark=Time.now
-minset, coverage=greedy_reduce( sample )
-puts "Dumping sample Minset #{minset.size}, covers #{coverage.size} - #{"%.2f" % (Time.now - mark)} secs"
-File.open( OPTS[:outfile], "wb+" ) {|ios|
-    sample.each {|fn, hsh|
-        ios.puts fn
-    }
-}
+end
