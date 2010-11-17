@@ -22,7 +22,7 @@ end
 
 include Reductions
 
-trace_db=TraceDB.new( OPTS[:tracedb], "re" )
+trace_db=TraceDB.new( OPTS[:tracedb], "re" ) # "re" -> readonly, no locking
 reduced_db=OklahomaMixer.open( OPTS[:infile], "re" )
 filenames=MessagePack.unpack(reduced_db['set'])
 sample={}
@@ -30,6 +30,10 @@ sample={}
 filenames.each {|fn|
     sample.merge! trace_db.get_trace( fn )
 }
+
+reduced_db.close
+trace_db.close
+
 raise "#{__FILE__}: Can't find all traces in the trace DB" unless sample.size==filenames.size
 
 puts "Greedy reducing #{sample.size} from #{trace_db.traces}"
