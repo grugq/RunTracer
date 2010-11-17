@@ -76,6 +76,8 @@ class IterativeReducer
         @avg
     end
 
+    # This could be refactored into Reductions but it's ugly
+    # with the ivars we need to access.
     def update_reduced( this_set, fn )
         this_hsh={}
         # General Algorithm
@@ -121,7 +123,7 @@ class IterativeReducer
         deflated=Set.new( MessagePack.unpack(message['deflated']) )
         debug_info "Updating reduced"
         update_reduced( deflated, message['filename'])
-        message.delete 'deflated'
+        message.delete 'deflated' 
         @stalk.put message.to_msgpack #into 'reduced' tube
         @processed+=1
         debug_info "Finished. Reduced Set: #{reduced_size} Total Cov: #{coverage}, Rolling Avg: #{rolling_average}, Processed: #{@processed}"
