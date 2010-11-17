@@ -7,16 +7,16 @@
 ###Ruby Stuff
 
 * Access to Tokyo Cabinet files
-    gem install oklahoma_mixer
+		gem install oklahoma_mixer
 
 * Fast serialization
-    gem install msgpack
+		gem install msgpack
 
 * Access to beanstalkd
-    gem install beanstalk_client
+		gem install beanstalk_client
 
 * Option parsing
-    gem install trollop
+		gem install trollop
 
 ###Infrastructure
 
@@ -30,23 +30,23 @@ Please google for latest packages and download sites.
 ###Ruby Stuff
 
 * Fast serialization
-    gem install msgpack
+		gem install msgpack
 
 * Access to beanstalkd
-    gem install beanstalk_client
+		gem install beanstalk_client
 
 * Option parsing
-    gem install trollop
+		gem install trollop
 
 * Win32 stuff - may need DevKit, check google
-    gem install win32-process --platform=ruby
-    gem install sys-proctable --platform=x86-mswin32
-    gem install win32-api --platform=ruby
+		    gem install win32-process --platform=ruby
+		gem install sys-proctable --platform=x86-mswin32
+		gem install win32-api --platform=ruby
 
 ##Running:
 
 In general, start beanstalkd like:
-    beanstalkd -z 30000000 -d
+		beanstalkd -z 30000000 -d
 
 To allow 30MB work items to be pushed
 
