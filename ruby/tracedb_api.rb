@@ -42,7 +42,7 @@ class TraceDB
             :covered=>@db["blk:#{filename}"],
             :trace=>@db["trc:#{filename}"] #still packed.
         }
-        raise "DB screwed?" unless hsh[k][:covered] && hsh[k][:trace]
+        raise "DB screwed?" unless hsh[filename][:covered] && hsh[filename][:trace]
         hsh
     end
 
