@@ -23,7 +23,7 @@ end
 include Reductions
 
 trace_db=TraceDB.new( OPTS[:tracedb], "re" )
-reduced_db=OklahomeMixer.open( OPTS[:infile], "re" )
+reduced_db=OklahomaMixer.open( OPTS[:infile], "re" )
 filenames=MessagePack.unpack(reduced_db['set'])
 sample={}
 
