@@ -38,7 +38,7 @@ class TraceDB
 
     def get_trace( filename )
         hsh={}
-        hsh[k]={
+        hsh[filename]={
             :covered=>@db["blk:#{filename}"],
             :trace=>@db["trc:#{filename}"] #still packed.
         }
