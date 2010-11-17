@@ -43,7 +43,6 @@ class TraceDB
             :trace=>@db["trc:#{filename}"] #still packed.
         }
         raise "DB screwed?" unless hsh[k][:covered] && hsh[k][:trace]
-        }
         hsh
     end
 
