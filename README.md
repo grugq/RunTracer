@@ -1,29 +1,33 @@
-= RunTrace - Prospector components (part of COSEINC's BugMine)
+RunTrace - Prospector components (part of COSEINC's BugMine)
+============================================================
 
-== RunTracers ==
+RunTracers
+----------
 
-=== ccovtrace ===
+### ccovtrace
 
 Code coverage tracer.
 
-=== runtrace ===
+### runtrace
 
 Complex runtime trace analysis tool with more options that necessary.
 
-=== exceptiondump ===
+### exceptiondump
 
 RunTracer to dump the last basic block executed before a first chance execption (windows only).
 
-== INSTALLATION ==
+INSTALLATION
+------------
 
 Requirements:
-* PIN (http://www.pintool.org/)
-* Compiler suite (Visual Studio Express)
+*   PIN (http://www.pintool.org/)
+*   Compiler suite (Visual Studio Express)
 
 Procedure:
-# Place this source code in the ${PIN}/tools/source/ directory.
-# ..\nmake.bat ccovtrace
+1. Place this source code in the ${PIN}/tools/source/ directory.
+2. ..\nmake.bat ccovtrace
 
-== USAGE ==
+USAGE
+-----
 
 Launch using the pin.bat tool in the ${PIN}/tools/ directory. See the --help output for more specific command line handling directions.
