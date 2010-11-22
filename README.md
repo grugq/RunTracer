@@ -20,10 +20,12 @@ INSTALLATION
 ------------
 
 Requirements:
+
 *   PIN (http://www.pintool.org/)
 *   Compiler suite (Visual Studio Express)
 
 Procedure:
+
 1. Place this source code in the ${PIN}/tools/source/ directory.
 2. ..\nmake.bat ccovtrace
 
