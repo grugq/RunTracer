@@ -185,7 +185,7 @@ VOID CallTrace(TRACE trace, INS ins)
 	// RTN = TRACE_Rtn(trace);
 	// ADDRINT rtn_addr = RTN_Address(rtn);
 
-	if (INS_IsCall(ins) && !INS_IsDirectBranchOrCall(ins)) {
+	if (INS_IsBranchOrCall(ins) && !INS_IsDirectBranchOrCall(ins)) {
 		// Indirect Call
 		INS_InsertCall(ins, IPOINT_BEFORE,
 				AFUNPTR(EmitIndirectCall),
