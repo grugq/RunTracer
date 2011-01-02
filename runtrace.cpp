@@ -6,9 +6,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
-#include <alloca.h>
+
+namespace WINDOWS
+{
+#include <windows.h>
+}
 
 #include "runtrace.h"
+#define stack_alloca(x)		_malloca(x)
 
 static FILE * OutFile;
 static TRACE_RECORD_FILE_HEADER FileHeader;
@@ -116,37 +121,40 @@ static VOID EmitMemory(THREADID threadid, ADDRINT address, bool isStore, ADDRINT
 }
 
 static void
-EmitHeapAllocateRecord(THREADID threadid, ADDRINT memaddr, VOID *heapHandle, ULONG size)
+EmitHeapAllocateRecord(THREADID threadid, WINDOWS::PVOID memaddr,
+		WINDOWS::PVOID heapHandle, WINDOWS::ULONG size)
 {
 	TRACE_RECORD_HEAP_ALLOC	record;
 
-	record.heap = heapHandle;
+	record.heap = (ADDRINT) heapHandle;
 	record.size = size;
-	record.address = memaddr;
+	record.address = (ADDRINT) memaddr;
 
 	EmitRecord(TRACE_TYPE_HEAP_ALLOC, threadid, &record, sizeof(record));
 }
 
 static void
-EmitHeapReAllocateRecord(THREADID threadid, ADDRINT address, VOID *heapHandle, ADDRINT oldaddress, ULONG size)
+EmitHeapReAllocateRecord(THREADID threadid, WINDOWS::PVOID address,
+		WINDOWS::PVOID heapHandle, WINDOWS::PVOID oldaddress,
+		WINDOWS::ULONG size)
 {
 	TRACE_RECORD_HEAP_REALLOC	record;
 
-	record.heap = heapHandle;
-	record.address = address;
+	record.heap = (ADDRINT) heapHandle;
+	record.address = (ADDRINT) address;
 	record.size = size;
-	record.oldaddress = oldaddress;
+	record.oldaddress = (ADDRINT) oldaddress;
 
 	EmitRecord(TRACE_TYPE_HEAP_ALLOC, threadid, &record, sizeof(record));
 }
 
 static void
-EmitHeapFreeRecord(THREADID threadid, VOID *heapHandle, ADDRINT address)
+EmitHeapFreeRecord(THREADID threadid, WINDOWS::PVOID heapHandle, WINDOWS::PVOID address)
 {
 	TRACE_RECORD_HEAP_FREE	record;
 
-	record.heap = heapHandle;
-	record.address = address;
+	record.heap = (ADDRINT) heapHandle;
+	record.address = (ADDRINT) address;
 
 	EmitRecord(TRACE_TYPE_HEAP_ALLOC, threadid, &record, sizeof(record));
 }
@@ -155,11 +163,11 @@ static VOID
 EmitLibraryLoadEvent(THREADID threadid, const string& name,
 			ADDRINT low, ADDRINT high)
 {
-	TRACE_LIBRARY_LOAD	* record;
+	TRACE_RECORD_LIBRARY_LOAD	* record;
 	size_t	  size;
 
 	size = sizeof(*record) + name.length();
-	record = (TRACE_LIBRARY_LOAD *) alloca(size);
+	record = (TRACE_RECORD_LIBRARY_LOAD *) stack_alloca(size);
 
 	record->low = low;
 	record->high = high;
@@ -279,7 +287,7 @@ static WINDOWS::PVOID
 replacementRtlReAllocateHeap(
 		AFUNPTR rtlReAllocateHeap,
 		WINDOWS::PVOID heapHandle,
-		WINDOWS::ULONG hlags,
+		WINDOWS::ULONG flags,
 		WINDOWS::PVOID memoryPtr,
 		WINDOWS::SIZE_T size,
 		CONTEXT *ctx)
@@ -301,7 +309,7 @@ replacementRtlReAllocateHeap(
 }
 
 static WINDOWS::BOOL
-rtlFreeHeap(
+replacementRtlFreeHeap(
 		AFUNPTR rtlFreeHeap,
 		WINDOWS::PVOID heapHandle,
 		WINDOWS::ULONG flags,
@@ -338,21 +346,26 @@ LogImageLoad(IMG img)
 static VOID
 HookHeapFunctions(IMG img)
 {
-	// make sure we got the right IMG
-	if ((RTN rtl = RTN_FindByName("RtlAllocateHeap")) == RTN_Invalid()) 
+	RTN rtn;
+
+	// check this image actually has the heap functions.
+	if ((rtn = RTN_FindByName(img, "RtlAllocateHeap")) == RTN_Invalid())
 		return;
 
 	// hook RtlAllocateHeap
-	RTN rtn = RTN_FindByName(img, "RtlAllocateHeap")
-	PROTO protoRtlAllocateHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
-						"RtlAllocateHeap",
-						PIN_PARG(WINDOWS::PVOID), // HeapHandle
-						PIN_PARG(WINDOWS::ULONG),    // Flags
-						PIN_PARG(WINDOWS::SIZE_T),   // Size
-						PIN_PARG_END()
-						);
+	RTN rtlAllocate = RTN_FindByName(img, "RtlAllocateHeap");
 
-	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlAllocateHeap,
+	PROTO protoRtlAllocateHeap = \
+		PROTO_Allocate( PIN_PARG(void *),
+				CALLINGSTD_DEFAULT,
+				"RtlAllocateHeap",
+				PIN_PARG(WINDOWS::PVOID), // HeapHandle
+				PIN_PARG(WINDOWS::ULONG),    // Flags
+				PIN_PARG(WINDOWS::SIZE_T),   // Size
+				PIN_PARG_END()
+				);
+
+	RTN_ReplaceSignature(rtlAllocate,(AFUNPTR)replacementRtlAllocateHeap,
 			IARG_PROTOTYPE, protoRtlAllocateHeap,
 			IARG_ORIG_FUNCPTR,
 			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -365,17 +378,18 @@ HookHeapFunctions(IMG img)
 	PROTO_Free(protoRtlAllocateHeap);
 
 	// replace RtlReAllocateHeap()
-	RTN rtn = RTN_FindByName(img, "RtlReAllocateHeap")
-	PROTO protoRtlReAllocateHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
-						"RtlReAllocateHeap",
-						PIN_PARG(WINDOWS::PVOID), // HeapHandle
-						PIN_PARG(WINDOWS::ULONG), // Flags
-						PIN_PARG(WINDOWS::PVOID), // MemoryPtr
-						PIN_PARG(WINDOWS::SIZE_T),// Size
-						PIN_PARG_END()
-						);
+	RTN rtlReallocate = RTN_FindByName(img, "RtlReAllocateHeap");
+	PROTO protoRtlReAllocateHeap = \
+			PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+					"RtlReAllocateHeap",
+					PIN_PARG(WINDOWS::PVOID), // HeapHandle
+					PIN_PARG(WINDOWS::ULONG), // Flags
+					PIN_PARG(WINDOWS::PVOID), // MemoryPtr
+					PIN_PARG(WINDOWS::SIZE_T),// Size
+					PIN_PARG_END()
+					);
 
-	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlReAllocateHeap,
+	RTN_ReplaceSignature(rtlReallocate,(AFUNPTR)replacementRtlReAllocateHeap,
 			IARG_PROTOTYPE, protoRtlReAllocateHeap,
 			IARG_ORIG_FUNCPTR,
 			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -389,16 +403,17 @@ HookHeapFunctions(IMG img)
 	PROTO_Free(protoRtlReAllocateHeap);
 
 	// replace RtlFreeHeap
-	RTN rtn = RTN_FindByName(img, "RtlFreeHeap")
-	PROTO protoRtlFreeHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
-						"RtlFreeHeap",
-						PIN_PARG(WINDOWS::PVOID), // HeapHandle
-						PIN_PARG(WINDOWS::ULONG),    // Flags
-						PIN_PARG(WINDOWS::PVOID),   // MemoryPtr
-						PIN_PARG_END()
-						);
+	RTN rtlFree = RTN_FindByName(img, "RtlFreeHeap");
+	PROTO protoRtlFreeHeap = \
+		PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+				"RtlFreeHeap",
+				PIN_PARG(WINDOWS::PVOID), // HeapHandle
+				PIN_PARG(WINDOWS::ULONG),    // Flags
+				PIN_PARG(WINDOWS::PVOID),   // MemoryPtr
+				PIN_PARG_END()
+				);
 
-	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlFreeHeap,
+	RTN_ReplaceSignature(rtlFree,(AFUNPTR)replacementRtlFreeHeap,
 			IARG_PROTOTYPE, protoRtlFreeHeap,
 			IARG_ORIG_FUNCPTR,
 			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -409,33 +424,9 @@ HookHeapFunctions(IMG img)
 			);
 
 	PROTO_Free(protoRtlAllocateHeap);
-
-	// replace RtlReAllocateHeap()
-	RTN rtn = RTN_FindByName(img, "RtlReAllocateHeap")
-	PROTO protoRtlReAllocateHeap = PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
-						"RtlReAllocateHeap",
-						PIN_PARG(WINDOWS::PVOID), // HeapHandle
-						PIN_PARG(WINDOWS::ULONG), // Flags
-						PIN_PARG(WINDOWS::PVOID), // MemoryPtr
-						PIN_PARG(WINDOWS::SIZE_T),// Size
-						PIN_PARG_END()
-						);
-
-	RTN_ReplaceSignature(rtn,(AFUNPTR)replacement_RtlReAllocateHeap,
-			IARG_PROTOTYPE, protoRtlReAllocateHeap,
-			IARG_ORIG_FUNCPTR,
-			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
-			IARG_FUNCARG_ENTRYPOINT_VALUE, 1,
-			IARG_FUNCARG_ENTRYPOINT_VALUE, 2,
-			IARG_FUNCARG_ENTRYPOINT_VALUE, 3,
-			IARG_CONTEXT,
-			IARG_END
-			);
-
-	PROTO_Free(protoRtlReAllocateHeap);
 }
 
-VOID ImageLoad(IMG *img, VOID *v)
+VOID ImageLoad(IMG img, VOID *v)
 {
 	if (KnobTraceLibs)
 		LogImageLoad(img);

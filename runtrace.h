@@ -20,7 +20,7 @@ enum TRACE_RECORD_TYPES {
 	TRACE_TYPE_HEAP_REALLOC,    // 6
 	TRACE_TYPE_HEAP_FREE,       // 7
 	TRACE_TYPE_MEMORY,          // 8
-	TRACE_TYPE_LIBRAY_LOAD,     // 9
+	TRACE_TYPE_LIBRARY_LOAD,    // 9
 };
 
 typedef struct TRACE_RECORD_HEADER {
@@ -73,7 +73,7 @@ typedef struct TRACE_RECORD_LIBRARY_LOAD {
 	ADDRINT	high;
 	UINT32	namelen;
 	char	name[255];
-};
+} TRACE_RECORD_LIBRARY_LOAD;
 
 
 typedef struct TRACE_RECORD {

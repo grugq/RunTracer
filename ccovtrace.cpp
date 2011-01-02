@@ -136,7 +136,7 @@ ImageLoad(IMG img, VOID *v)
 #define CONTAINS(it,addr) ((addr>(*it).second.first)&&(addr<(*it).second.second))
 
 static const string *
-lookupSymbol(ADDRINT addr)
+LookupSymbol(ADDRINT addr)
 {
 	std::map<string *,std::pair<ADDRINT,ADDRINT>>::iterator	it;
 	char	s[256];
@@ -167,8 +167,8 @@ Fini(int ignored, VOID *v)
 	std::map<std::pair<ADDRINT,ADDRINT>,int>::iterator it;
 
 	for (it = basicBlocks.begin(); it != basicBlocks.end(); it++) {
-		const string	* symbol1 = lookupSymbol((*it).first.first);
-		const string 	* symbol2 = lookupSymbol((*it).first.second);
+		const string	* symbol1 = LookupSymbol((*it).first.first);
+		const string 	* symbol2 = LookupSymbol((*it).first.second);
 
 		fprintf(traceFile, "%s\t%s\t%d\n",
 				symbol1->c_str(), symbol2->c_str(),
@@ -176,7 +176,6 @@ Fini(int ignored, VOID *v)
 
 		delete symbol1;
 		delete symbol2;
-
 	}
 
         fflush(traceFile);
@@ -205,6 +204,7 @@ int main(int argc, char **argv)
 
 	PIN_AddFiniFunction(Fini, 0);
 
+	// never returns..
 	PIN_StartProgram();
 
 	return 0;
