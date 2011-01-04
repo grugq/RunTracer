@@ -33,11 +33,11 @@ endif
 #
 ##############################################################
 
-TOOL_ROOTS = runtrace ccovtrace exceptiondump
+TOOL_ROOTS = runtrace ccovtrace exceptiondump instdump testcntx
 
 # leave out fence, see comment at top of fence.cpp
 
-TEST_TOOLS_ROOTS = runtrace ccovtrace exceptiondump
+TEST_TOOLS_ROOTS = runtrace ccovtrace exceptiondump instdump
 
 TEST_TOOLS = $(TEST_TOOLS_ROOTS:%=%$(PINTOOL_SUFFIX))
 
