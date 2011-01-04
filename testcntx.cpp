@@ -13,6 +13,7 @@
 #ifdef WINDOWS_IS_FUCKING_FUCKED
 #define snprintf	sprintf_s
 #define stricmp		_stricmp
+#define strdup		_strdup
 #endif /* WINDOWS_IS_FUCKING_FUCKED */
 
 
