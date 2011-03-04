@@ -154,16 +154,15 @@ print_heaplist(char *banner, heaplist_t &heaps)
 {
 	std::map<unsigned long, heap_t>::iterator	it;
 
-	std::cout << banner << std::endl;
 
+	fprintf(LogFile, "--[ %s ]--\n", banner);
 	for (it = heaps.begin(); it != heaps.end(); it++) {
 		heap_t 	& heap = (*it).second;
 
-		std::cout << "[" << (*it).first << "]" ;
-		std::cout << " " << heap.start() << " -> " << heap.end();
-		std::cout << std::endl;
+		fprintf("[%x] %#x -> %#x\n", (*it).first,
+				heap.start(), heap.end());
 	}
-	std::cout << std::endl;
+	fprintf(LogFile, "\n");
 }
 
 
@@ -436,9 +435,10 @@ image_load(IMG img, VOID *v)
 VOID
 finish(int ignored, VOID *arg)
 {
+	print_heaplist("finishing up", HeapsList);
+
 	fflush(LogFile);
 	fclose(LogFile);
-	print_heaplist("finishing up", HeapsList);
 }
 
 UINT32
