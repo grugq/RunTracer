@@ -178,6 +178,7 @@ TraceInstructions(INS ins, VOID *arg)
 			IARG_PTR, disasm, // disassembled string
 			IARG_MEMORYREAD_EA, // effective address being read
 			IARG_MEMORYREAD_SIZE, // num bytes read
+			IARG_MEMORYREAD2_EA,
 			IARG_CONTEXT,
 			IARG_PTR, (void *) listRegisters(ins),
 			IARG_END);

@@ -82,6 +82,15 @@ public:
 	bool has_address(unsigned long address);
 	bool in_range(unsigned long address);
 
+	void set_ntdll(unsigned long low, unsigned long high) {
+		mNTDLL_low = low; mNTDLL_high =high;
+	}
+	bool is_ntdll(unsigned long address) {
+		if (address >= mNTDLL_low && address <= mNTDLL_high)
+			return true;
+		return false;
+	}
+
 	std::list<chunk_t>::iterator	begin() {return mChunks.begin(); };
 	std::list<chunk_t>::iterator	end() {return mChunks.end(); };
 	unsigned int size() const { return mChunks.size(); }
@@ -90,6 +99,65 @@ private:
 	std::list<chunk_t>	mChunks;
 	unsigned int		mInserts;
 	unsigned int		mRemoves;
+	unsigned long		mNTDLL_low;
+	unsigned long		mNTDLL_high;
+};
+
+class heap_t {
+public:
+	heap_t()
+		: mStart(0), mEnd(0)
+	{};
+	heap_t(const heap_t &heap)
+		: mStart(heap.mStart), mEnd(heap.mEnd)
+	{};
+	~heap_t() {};
+
+	unsigned long start() const { return mStart; };
+	unsigned long end() const { return mEnd; };
+	unsigned long start(unsigned long s) { mStart = s; return mStart; };
+	unsigned long end(unsigned long s) { mEnd = s; return mEnd; };
+private:
+	unsigned long	mStart;
+	unsigned long	mEnd;
+};
+
+class heaplist_t
+{
+public:
+	heaplist_t() {};
+	~heaplist_t() {};
+
+	void update(unsigned long handle, unsigned long addr) {
+		heap_t	&heap = mHeaps[handle];
+
+		if (heap.start() == 0)
+			heap.start(addr);
+		if (heap.end() == 0) 
+			heap.end(addr);
+
+		if (heap.end() < addr)
+			heap.end(addr);
+		else if (heap.start() > addr)
+			heap.start(addr);
+	};
+
+	bool contains(unsigned long addr) {
+		std::map<unsigned long, heap_t>::iterator	it;
+		for (it = mHeaps.begin(); it != mHeaps.end(); it++) {
+			heap_t & heap = (*it).second;
+
+			if (addr >= heap.start() && addr <= heap.end())
+				return true;
+		}
+		return false;
+	};
+
+	std::map<unsigned long, heap_t>::iterator begin() { return mHeaps.begin(); };
+	std::map<unsigned long, heap_t>::iterator end() { return mHeaps.end(); };
+
+private:
+	std::map<unsigned long, heap_t> mHeaps;
 };
 
 
@@ -97,6 +165,7 @@ private:
  * GLOBALS (again)
  */
 chunklist_t	 ChunksList;
+heaplist_t	 HeapsList;
 
 void
 chunklist_t::insert(unsigned long address, unsigned long size)
@@ -162,7 +231,7 @@ chunklist_t::in_range(unsigned long address)
 static void
 log_redflag(ADDRINT address, ADDRINT ea)
 {
-	fprintf(LogFile, "eip:%x ea:%x\n", address, ea);
+	fprintf(LogFile, "%#x %#x %#x\n", address, ea, *((unsigned long*)ea));
 }
 
 #define STACKSHIFT	(3*8)
@@ -176,11 +245,15 @@ write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
 		return;
 
 	// is it in a known heap region?
-	if (!ChunksList.in_range(ea))
+	if (!HeapsList.contains(ea))
 		return;
 
 	// is it in the heap?
 	if (ChunksList.contains(ea))
+		return;
+
+	// is it normal access by heap management code?
+	if (ChunksList.is_ntdll(eip))
 		return;
 
 	// is it in a mmap() file?
@@ -228,6 +301,7 @@ replacementRtlAllocateHeap(
 			);
 
 	ChunksList.insert((unsigned long) retval, size);
+	HeapsList.update((unsigned long) heapHandle, (unsigned long) retval);
 
 	return retval;
 };
@@ -256,6 +330,7 @@ replacementRtlReAllocateHeap(
 
 	ChunksList.remove((unsigned long)memoryPtr);
 	ChunksList.insert((unsigned long)retval, size);
+	HeapsList.update((unsigned long) heapHandle, (unsigned long) retval);
 
 	return retval;
 }
@@ -296,7 +371,7 @@ image_load(IMG img, VOID *v)
 	// hook RtlAllocateHeap
 	RTN rtlAllocate = RTN_FindByName(img, "RtlAllocateHeap");
 
-	PROTO protoRtlAllocateHeap = \
+	PROTO protoRtlAllocateHeap = 
 		PROTO_Allocate( PIN_PARG(void *),
 				CALLINGSTD_STDCALL,
 				"RtlAllocateHeap",
@@ -320,7 +395,7 @@ image_load(IMG img, VOID *v)
 
 	// replace RtlReAllocateHeap()
 	RTN rtlReallocate = RTN_FindByName(img, "RtlReAllocateHeap");
-	PROTO protoRtlReAllocateHeap = \
+	PROTO protoRtlReAllocateHeap = 
 			PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_STDCALL,
 					"RtlReAllocateHeap",
 					PIN_PARG(WINDOWS::PVOID), // HeapHandle
@@ -330,7 +405,8 @@ image_load(IMG img, VOID *v)
 					PIN_PARG_END()
 					);
 
-	RTN_ReplaceSignature(rtlReallocate,(AFUNPTR)replacementRtlReAllocateHeap,
+	RTN_ReplaceSignature(rtlReallocate,
+			(AFUNPTR)replacementRtlReAllocateHeap,
 			IARG_PROTOTYPE, protoRtlReAllocateHeap,
 			IARG_ORIG_FUNCPTR,
 			IARG_FUNCARG_ENTRYPOINT_VALUE, 0,
@@ -371,6 +447,11 @@ image_load(IMG img, VOID *v)
 VOID
 finish(int ignored, VOID *arg)
 {
+	std::map<unsigned long, heap_t>::iterator	it;
+
+	for (it = HeapsList.begin(); it != HeapsList.end(); it++)
+		fprintf(LogFile, "# %#x %#x\n", (*it).start(), (*it).end());
+
 	fflush(LogFile);
 	fclose(LogFile);
 }
