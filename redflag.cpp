@@ -84,16 +84,19 @@ public:
 
 	void set_ntdll(unsigned long low, unsigned long high) {
 		mNTDLL_low = low; mNTDLL_high =high;
-	}
+	};
 	bool is_ntdll(unsigned long address) {
 		if (address >= mNTDLL_low && address <= mNTDLL_high)
 			return true;
 		return false;
-	}
+	};
 
 	std::list<chunk_t>::iterator	begin() {return mChunks.begin(); };
 	std::list<chunk_t>::iterator	end() {return mChunks.end(); };
 	unsigned int size() const { return mChunks.size(); }
+
+	unsigned long ntdll_low() const { return mNTDLL_low; }
+	unsigned long ntdll_high() const { return mNTDLL_high; }
 
 private:
 	std::list<chunk_t>	mChunks;
@@ -368,6 +371,8 @@ image_load(IMG img, VOID *v)
 	if ((rtn = RTN_FindByName(img, "RtlAllocateHeap")) == RTN_Invalid())
 		return;
 
+	ChunksList.set_ntdll(IMG_LowAddress(img), IMG_HighAddress(img));
+
 	// hook RtlAllocateHeap
 	RTN rtlAllocate = RTN_FindByName(img, "RtlAllocateHeap");
 
@@ -450,8 +455,10 @@ finish(int ignored, VOID *arg)
 	std::map<unsigned long, heap_t>::iterator	it;
 
 	for (it = HeapsList.begin(); it != HeapsList.end(); it++)
-		fprintf(LogFile, "# %#x %#x\n", (*it).start(), (*it).end());
+		fprintf(LogFile, "# %#x %#x\n",
+				(*it).second.start(), (*it).second.end());
 
+	fprintf("# ntdll: %#x %#x\n", ChunksList.ntdll_low(), ChunksList.ntdll_high());
 	fflush(LogFile);
 	fclose(LogFile);
 }
