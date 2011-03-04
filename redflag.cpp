@@ -80,6 +80,7 @@ public:
 	void remove(unsigned long address);
 	bool contains(unsigned long address);
 	bool has_address(unsigned long address);
+	bool in_range(unsigned long address);
 
 	std::list<chunk_t>::iterator	begin() {return mChunks.begin(); };
 	std::list<chunk_t>::iterator	end() {return mChunks.end(); };
@@ -155,7 +156,7 @@ chunklist_t::in_range(unsigned long address)
 	if (address >= mChunks.front().address() && 
 	    address <= (mChunks.back().address() + mChunks.back().size()))
 		return true;
-	return false
+	return false;
 }
 
 static void
@@ -164,8 +165,8 @@ log_redflag(ADDRINT address, ADDRINT ea)
 	fprintf(LogFile, "eip:%x ea:%x\n", address, ea);
 }
 
-#define STACK_SHIFT	(3*8)
-#define	is_stack(EA, SP)	(((SP)>>STACK_SHIFT)==((EA)>>STACK_SHIFT))
+#define STACKSHIFT	(3*8)
+#define	is_stack(EA, SP)	(((SP)>>STACKSHIFT)==((EA)>>STACKSHIFT))
 
 static void
 write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
@@ -187,6 +188,8 @@ write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
 
 	log_redflag(eip, ea);
 }
+#undef STACKSHIFT
+#undef is_stack
 
 static void
 trace_instructions(INS ins, VOID *arg)
