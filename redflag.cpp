@@ -232,16 +232,26 @@ chunklist_t::in_range(unsigned long address)
 }
 
 static void
-log_redflag(ADDRINT address, ADDRINT ea)
+log_redflag(ADDRINT address, ADDRINT ea, unsigned int size)
 {
-	fprintf(LogFile, "%#x %#x %#x\n", address, ea, *((unsigned long*)ea));
+	unsigned long long	value;
+
+	switch (size) {
+	case 1: value = *(unsigned char *)ea; break;
+	case 2: value = *(unsigned short *)ea; break;
+	case 4: value = *(unsigned int *)ea; break;
+	case 8: value = *(unsigned long long *)ea; break;
+	default: value = *(unsigned long *)ea; break;
+	}
+
+	fprintf(LogFile, "%#x %#x %#x\n", address, ea, value);
 }
 
 #define STACKSHIFT	(3*8)
 #define	is_stack(EA, SP)	(((SP)>>STACKSHIFT)==((EA)>>STACKSHIFT))
 
 static void
-write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
+write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea, unsigned int size)
 {
 	// is it on the stack?
 	if (is_stack(ea, esp))
@@ -262,7 +272,7 @@ write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
 	// is it in a mmap() file?
 	// ... not sure how to test this
 
-	log_redflag(eip, ea);
+	log_redflag(eip, ea, size);
 }
 #undef STACKSHIFT
 #undef is_stack
@@ -276,6 +286,7 @@ trace_instructions(INS ins, VOID *arg)
 				IARG_INST_PTR,
 				IARG_REG_VALUE, REG_STACK_PTR,
 				IARG_MEMORYWRITE_EA,
+				IARG_MEMORYWRITE_SIZE,
 				IARG_END
 			       );
 }
@@ -458,7 +469,6 @@ finish(int ignored, VOID *arg)
 		fprintf(LogFile, "# %#x %#x\n",
 				(*it).second.start(), (*it).second.end());
 
-	fprintf("# ntdll: %#x %#x\n", ChunksList.ntdll_low(), ChunksList.ntdll_high());
 	fflush(LogFile);
 	fclose(LogFile);
 }
