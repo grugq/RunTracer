@@ -270,7 +270,7 @@ replacementRtlAllocateHeap(
 	WINDOWS::PVOID	retval;
 
 	PIN_CallApplicationFunction(ctx, PIN_ThreadId(),
-			CALLINGSTD_DEFAULT, rtlAllocateHeap,
+			CALLINGSTD_STDCALL, rtlAllocateHeap,
 			PIN_PARG(void *), &retval,
 			PIN_PARG(WINDOWS::PVOID), heapHandle,
 			PIN_PARG(WINDOWS::ULONG), flags,
@@ -295,7 +295,7 @@ replacementRtlReAllocateHeap(
 	WINDOWS::PVOID	retval;
 
 	PIN_CallApplicationFunction(ctx, PIN_ThreadId(),
-			CALLINGSTD_DEFAULT, rtlReAllocateHeap,
+			CALLINGSTD_STDCALL, rtlReAllocateHeap,
 			PIN_PARG(void *), &retval,
 			PIN_PARG(WINDOWS::PVOID), heapHandle,
 			PIN_PARG(WINDOWS::ULONG), flags,
@@ -319,7 +319,7 @@ replacementRtlFreeHeap(
 	WINDOWS::BOOL 	retval;
 
 	PIN_CallApplicationFunction(ctx, PIN_ThreadId(),
-			CALLINGSTD_DEFAULT, rtlFreeHeap,
+			CALLINGSTD_STDCALL, rtlFreeHeap,
 			PIN_PARG(WINDOWS::BOOL), &retval,
 			PIN_PARG(WINDOWS::PVOID), heapHandle,
 			PIN_PARG(WINDOWS::ULONG), flags,
@@ -357,7 +357,7 @@ HookHeapFunctions(IMG img)
 
 	PROTO protoRtlAllocateHeap = \
 		PROTO_Allocate( PIN_PARG(void *),
-				CALLINGSTD_DEFAULT,
+				CALLINGSTD_STDCALL,
 				"RtlAllocateHeap",
 				PIN_PARG(WINDOWS::PVOID), // HeapHandle
 				PIN_PARG(WINDOWS::ULONG),    // Flags
@@ -380,7 +380,7 @@ HookHeapFunctions(IMG img)
 	// replace RtlReAllocateHeap()
 	RTN rtlReallocate = RTN_FindByName(img, "RtlReAllocateHeap");
 	PROTO protoRtlReAllocateHeap = \
-			PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+			PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_STDCALL,
 					"RtlReAllocateHeap",
 					PIN_PARG(WINDOWS::PVOID), // HeapHandle
 					PIN_PARG(WINDOWS::ULONG), // Flags
@@ -405,7 +405,7 @@ HookHeapFunctions(IMG img)
 	// replace RtlFreeHeap
 	RTN rtlFree = RTN_FindByName(img, "RtlFreeHeap");
 	PROTO protoRtlFreeHeap = \
-		PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_DEFAULT,
+		PROTO_Allocate( PIN_PARG(void *), CALLINGSTD_STDCALL,
 				"RtlFreeHeap",
 				PIN_PARG(WINDOWS::PVOID), // HeapHandle
 				PIN_PARG(WINDOWS::ULONG),    // Flags
