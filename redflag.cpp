@@ -388,6 +388,8 @@ usage()
 int
 main(int argc, char **argv)
 {
+	PIN_InitSymbols();
+
 	if (PIN_Init(argc, argv))
 		return usage();
 
