@@ -131,16 +131,17 @@ public:
 	heaplist_t() {};
 	~heaplist_t() {};
 
-	void update(unsigned long handle, unsigned long addr) {
+	void update(unsigned long handle, unsigned long addr, unsigned long size) {
 		heap_t	&heap = mHeaps[handle];
+
 
 		if (heap.start() == 0)
 			heap.start(addr);
 		if (heap.end() == 0) 
-			heap.end(addr);
+			heap.end(addr+size);
 
-		if (heap.end() < addr)
-			heap.end(addr);
+		if (heap.end() < (addr+size))
+			heap.end(addr+size);
 		else if (heap.start() > addr)
 			heap.start(addr);
 	};
@@ -314,8 +315,10 @@ replacementRtlAllocateHeap(
 			PIN_PARG_END()
 			);
 
-	ChunksList.insert((unsigned long) retval, size);
-	HeapsList.update((unsigned long) heapHandle, (unsigned long) retval);
+	// adjust for heap management structures
+	ChunksList.insert((unsigned long) retval-8, size+8);
+	HeapsList.update((unsigned long) heapHandle, (unsigned long) retval-8,
+			size+8);
 
 	return retval;
 };
@@ -342,9 +345,10 @@ replacementRtlReAllocateHeap(
 			);
 	// XXX should we check for retval == NULL ?
 
-	ChunksList.remove((unsigned long)memoryPtr);
-	ChunksList.insert((unsigned long)retval, size);
-	HeapsList.update((unsigned long) heapHandle, (unsigned long) retval);
+	ChunksList.remove((unsigned long)memoryPtr-8);
+	ChunksList.insert((unsigned long)retval-8, size+8);
+	HeapsList.update((unsigned long) heapHandle, (unsigned long) retval-8,
+			size+8);
 
 	return retval;
 }
