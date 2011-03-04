@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <iostream>
 #include <list>
+#include <map>
 
 namespace WINDOWS
 {
@@ -100,10 +101,10 @@ public:
 	{};
 	~heap_t() {};
 
-	unsigned long start() const { return mStart; }
-	unsigned long end() const { return mEnd; }
-	unsigned long start(unsigned long s) { mStart = s; return mStart; }
-	unsigned long end(unsigned long s) { mEnd = s; return mEnd; }
+	unsigned long start() const { return mStart; };
+	unsigned long end() const { return mEnd; };
+	unsigned long start(unsigned long s) { mStart = s; return mStart; };
+	unsigned long end(unsigned long s) { mEnd = s; return mEnd; };
 private:
 	unsigned long	mStart;
 	unsigned long	mEnd;
@@ -127,7 +128,7 @@ public:
 			heap.end(addr);
 		else if (heap.start() > addr)
 			heap.start(addr);
-	}
+	};
 
 	bool contains(unsigned long addr) {
 		std::map<unsigned long, heap_t>::iterator	it;
@@ -138,10 +139,10 @@ public:
 				return true;
 		}
 		return false;
-	}
+	};
 
-	std::map<unsigned long, heap_t>::iterator begin() { return mHeaps.begin(); }
-	std::map<unsigned long, heap_t>::iterator end() { return mHeaps.end(); }
+	std::map<unsigned long, heap_t>::iterator begin() { return mHeaps.begin(); };
+	std::map<unsigned long, heap_t>::iterator end() { return mHeaps.end(); };
 
 private:
 	std::map<unsigned long, heap_t> mHeaps;
@@ -318,8 +319,8 @@ replacementRtlReAllocateHeap(
 			);
 	// XXX should we check for retval == NULL ?
 
-	ChunksList.remove(memoryPtr);
-	ChunksList.insert(retval, size);
+	ChunksList.remove((unsigned long)memoryPtr);
+	ChunksList.insert((unsigned long)retval, size);
 	HeapsList.update((unsigned long) heapHandle, (unsigned long)retval);
 
 	return retval;
