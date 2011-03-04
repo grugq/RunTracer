@@ -8,6 +8,7 @@
 #include "pin.H"
 #include <stdio.h>
 #include <algorithm>
+#include <iostream>
 #include <list>
 
 namespace WINDOWS
@@ -25,7 +26,6 @@ static FILE * LogFile;
 
 // forward declaration
 class chunklist_t;
-chunklist_t	 ChunksList;
 
 /*
  * housekeeping classes
@@ -89,6 +89,88 @@ private:
 	unsigned int		mInserts;
 	unsigned int		mRemoves;
 };
+
+class heap_t {
+public:
+	heap_t()
+		: mStart(0), mEnd(0)
+	{};
+	heap_t(const heap_t &heap)
+		: mStart(heap.mStart), mEnd(heap.mEnd)
+	{};
+	~heap_t() {};
+
+	unsigned long start() const { return mStart; }
+	unsigned long end() const { return mEnd; }
+	unsigned long start(unsigned long s) { mStart = s; return mStart; }
+	unsigned long end(unsigned long s) { mEnd = s; return mEnd; }
+private:
+	unsigned long	mStart;
+	unsigned long	mEnd;
+};
+
+class heaplist_t
+{
+public:
+	heaplist_t() {};
+	~heaplist_t() {};
+
+	void update(unsigned long handle, unsigned long addr) {
+		heap_t	&heap = mHeaps[handle];
+
+		if (heap.start() == 0)
+			heap.start(addr);
+		if (heap.end() == 0) 
+			heap.end(addr);
+
+		if (heap.end() < addr)
+			heap.end(addr);
+		else if (heap.start() > addr)
+			heap.start(addr);
+	}
+
+	bool contains(unsigned long addr) {
+		std::map<unsigned long, heap_t>::iterator	it;
+		for (it = mHeaps.begin(); it != mHeaps.end(); it++) {
+			heap_t & heap = (*it).second;
+
+			if (addr >= heap.start() && addr <= heap.end())
+				return true;
+		}
+		return false;
+	}
+
+	std::map<unsigned long, heap_t>::iterator begin() { return mHeaps.begin(); }
+	std::map<unsigned long, heap_t>::iterator end() { return mHeaps.end(); }
+
+private:
+	std::map<unsigned long, heap_t> mHeaps;
+};
+
+
+void
+print_heaplist(char *banner, heaplist_t &heaps)
+{
+	std::map<unsigned long, heap_t>::iterator	it;
+
+	std::cout << banner << std::endl;
+
+	for (it = heaps.begin(); it != heaps.end(); it++) {
+		heap_t 	& heap = (*it).second;
+
+		std::cout << "[" << (*it).first << "]" ;
+		std::cout << " " << heap.start() << " -> " << heap.end();
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+
+/* 
+ * GLOBALS (again)
+ */
+chunklist_t	 ChunksList;
+heaplist_t	 HeapsList;
 
 void
 chunklist_t::insert(unsigned long address, unsigned long size)
@@ -158,6 +240,10 @@ write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
 	if (is_stack(ea, esp))
 		return;
 
+	// is it in a known heap region?
+	if (!HeapsList.contains(ea))
+		return;
+
 	// is it in the heap?
 	if (ChunksList.contains(ea))
 		return;
@@ -204,7 +290,8 @@ replacementRtlAllocateHeap(
 			PIN_PARG_END()
 			);
 
-	ChunksList.insert(retval, size)
+	ChunksList.insert((unsigned long) retval, size);
+	HeapsList.update((unsigned long) heapHandle, (unsigned long)retval);
 
 	return retval;
 };
@@ -229,9 +316,11 @@ replacementRtlReAllocateHeap(
 			PIN_PARG(WINDOWS::SIZE_T), size,
 			PIN_PARG_END()
 			);
+	// XXX should we check for retval == NULL ?
 
 	ChunksList.remove(memoryPtr);
 	ChunksList.insert(retval, size);
+	HeapsList.update((unsigned long) heapHandle, (unsigned long)retval);
 
 	return retval;
 }
@@ -255,7 +344,7 @@ replacementRtlFreeHeap(
 			PIN_PARG_END()
 			);
 
-	ChunksList.remove(memoryPtr);
+	ChunksList.remove((unsigned long)memoryPtr);
 
 	return retval;
 }
@@ -344,7 +433,7 @@ image_load(IMG img, VOID *v)
 }
 
 VOID
-finish()
+finish(int ignored, VOID *arg)
 {
 	fflush(LogFile);
 	fclose(LogFile);
@@ -369,7 +458,7 @@ main(int argc, char **argv)
 
 	LogFile = fopen(KnobOutputFile.Value().c_str(), "wb+");
 
-	INS_AddInstrumentationFunction(trace_instructions, NULL);
+	INS_AddInstrumentFunction(trace_instructions, NULL);
 
 	IMG_AddInstrumentFunction(image_load, NULL);
 
