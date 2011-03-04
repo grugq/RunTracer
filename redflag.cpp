@@ -438,6 +438,7 @@ finish(int ignored, VOID *arg)
 {
 	fflush(LogFile);
 	fclose(LogFile);
+	print_heaplist("finishing up", HeapsList);
 }
 
 UINT32
