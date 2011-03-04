@@ -16,6 +16,9 @@ Complex runtime trace analysis tool with more options that necessary.
 
 RunTracer to dump the last basic block executed before a first chance execption (windows only).
 
+### redflag
+Heap corruption trace tool, logs writes to areas outside allocated heap chunks (windows only).
+
 INSTALLATION
 ------------
 

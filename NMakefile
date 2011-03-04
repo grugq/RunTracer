@@ -11,7 +11,7 @@ PIN_HOME=..
 
 # Define tools to be buit and tested
 ######################################################################################
-COMMON_TOOLS=runtrace.dll exceptiondump.dll ccovtrace.dll testcntx.dll
+COMMON_TOOLS=runtrace.dll exceptiondump.dll ccovtrace.dll testcntx.dll redflag.dll
 
 # Include building and testing rules from the root Nmakefile. 
 ######################################################################################
