@@ -91,86 +91,11 @@ private:
 	unsigned int		mRemoves;
 };
 
-class heap_t {
-public:
-	heap_t()
-		: mStart(0), mEnd(0)
-	{};
-	heap_t(const heap_t &heap)
-		: mStart(heap.mStart), mEnd(heap.mEnd)
-	{};
-	~heap_t() {};
-
-	unsigned long start() const { return mStart; };
-	unsigned long end() const { return mEnd; };
-	unsigned long start(unsigned long s) { mStart = s; return mStart; };
-	unsigned long end(unsigned long s) { mEnd = s; return mEnd; };
-private:
-	unsigned long	mStart;
-	unsigned long	mEnd;
-};
-
-class heaplist_t
-{
-public:
-	heaplist_t() {};
-	~heaplist_t() {};
-
-	void update(unsigned long handle, unsigned long addr) {
-		heap_t	&heap = mHeaps[handle];
-
-		if (heap.start() == 0)
-			heap.start(addr);
-		if (heap.end() == 0) 
-			heap.end(addr);
-
-		if (heap.end() < addr)
-			heap.end(addr);
-		else if (heap.start() > addr)
-			heap.start(addr);
-	};
-
-	bool contains(unsigned long addr) {
-		std::map<unsigned long, heap_t>::iterator	it;
-		for (it = mHeaps.begin(); it != mHeaps.end(); it++) {
-			heap_t & heap = (*it).second;
-
-			if (addr >= heap.start() && addr <= heap.end())
-				return true;
-		}
-		return false;
-	};
-
-	std::map<unsigned long, heap_t>::iterator begin() { return mHeaps.begin(); };
-	std::map<unsigned long, heap_t>::iterator end() { return mHeaps.end(); };
-
-private:
-	std::map<unsigned long, heap_t> mHeaps;
-};
-
-
-void
-print_heaplist(char *banner, heaplist_t &heaps)
-{
-	std::map<unsigned long, heap_t>::iterator	it;
-
-
-	fprintf(LogFile, "--[ %s ]--\n", banner);
-	for (it = heaps.begin(); it != heaps.end(); it++) {
-		heap_t 	& heap = (*it).second;
-
-		fprintf("[%x] %#x -> %#x\n", (*it).first,
-				heap.start(), heap.end());
-	}
-	fprintf(LogFile, "\n");
-}
-
 
 /* 
  * GLOBALS (again)
  */
 chunklist_t	 ChunksList;
-heaplist_t	 HeapsList;
 
 void
 chunklist_t::insert(unsigned long address, unsigned long size)
@@ -224,6 +149,15 @@ chunklist_t::has_address(unsigned long address)
 	return false;
 }
 
+bool
+chunklist_t::in_range(unsigned long address)
+{
+	if (address >= mChunks.front().address() && 
+	    address <= (mChunks.back().address() + mChunks.back().size()))
+		return true;
+	return false
+}
+
 static void
 log_redflag(ADDRINT address, ADDRINT ea)
 {
@@ -241,7 +175,7 @@ write_ins(ADDRINT eip, ADDRINT esp, ADDRINT ea)
 		return;
 
 	// is it in a known heap region?
-	if (!HeapsList.contains(ea))
+	if (!ChunksList.in_range(ea))
 		return;
 
 	// is it in the heap?
@@ -291,7 +225,6 @@ replacementRtlAllocateHeap(
 			);
 
 	ChunksList.insert((unsigned long) retval, size);
-	HeapsList.update((unsigned long) heapHandle, (unsigned long)retval);
 
 	return retval;
 };
@@ -320,7 +253,6 @@ replacementRtlReAllocateHeap(
 
 	ChunksList.remove((unsigned long)memoryPtr);
 	ChunksList.insert((unsigned long)retval, size);
-	HeapsList.update((unsigned long) heapHandle, (unsigned long)retval);
 
 	return retval;
 }
@@ -435,8 +367,6 @@ image_load(IMG img, VOID *v)
 VOID
 finish(int ignored, VOID *arg)
 {
-	print_heaplist("finishing up", HeapsList);
-
 	fflush(LogFile);
 	fclose(LogFile);
 }
