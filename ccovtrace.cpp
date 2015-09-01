@@ -31,17 +31,17 @@ END_LEGAL */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <map>
 #include <list>
 #include <iostream>
 #include <utility>
 #include "pin.H"
 
-#define WINDOWS_IS_FUCKING_FUCKED	1
-#ifdef WINDOWS_IS_FUCKING_FUCKED
-#define snprintf	sprintf_s
-#define stricmp		_stricmp
-#endif /* WINDOWS_IS_FUCKING_FUCKED */
+#ifdef _WIN32
+    #define snprintf	    sprintf_s
+    #define strcasecmp    _stricmp
+#endif
 
 
 KNOB<string> KnobOutputFile(KNOB_MODE_WRITEONCE, "pintool",
@@ -53,7 +53,7 @@ KNOB<std::string> KnobModuleList(KNOB_MODE_APPEND, "pintool",
 FILE	* traceFile;
 std::map<std::pair<ADDRINT,ADDRINT>, int>	basicBlocks;
 std::map<THREADID, ADDRINT> addressLog;
-std::map<string *,std::pair<ADDRINT,ADDRINT>>	moduleList;
+std::map<string *,std::pair<ADDRINT,ADDRINT> >	moduleList;
 
 static BOOL	whitelistMode = false;
 
@@ -109,11 +109,11 @@ basename(const string &fullpath)
 	return new string(fullpath.substr(found + 1));
 }
 
-#define	STRCMP(a, R, b)	(stricmp(a,b) R 0)
+#define	STRCMP(a, R, b)	(strcasecmp(a,b) R 0)
 static VOID
 ImageLoad(IMG img, VOID *v)
 {
-	std::map<std::string *,std::pair<ADDRINT,ADDRINT>>::iterator	it;
+	std::map<std::string *,std::pair<ADDRINT,ADDRINT> >::iterator	it;
 	ADDRINT	start = IMG_LowAddress(img);
 	ADDRINT	end = IMG_HighAddress(img);
 	const string &fullpath = IMG_Name(img);
@@ -138,7 +138,7 @@ ImageLoad(IMG img, VOID *v)
 static const string *
 LookupSymbol(ADDRINT addr)
 {
-	std::map<string *,std::pair<ADDRINT,ADDRINT>>::iterator	it;
+	std::map<string *,std::pair<ADDRINT,ADDRINT> >::iterator	it;
 	char	s[256];
 	int	found = 0;
 
@@ -148,14 +148,14 @@ LookupSymbol(ADDRINT addr)
 			ADDRINT offset = addr - (*it).second.first;
 			string *name = (*it).first;
 
-			snprintf(s, sizeof(s), "%s+%x", name->c_str(), offset);
+			snprintf(s, sizeof(s), "%s+%lx", name->c_str(), offset);
 			found = 1;
 			break;
 		}
 	}
 
 	if (!found) {
-		snprintf(s, sizeof(s), "?%#x", addr);
+		snprintf(s, sizeof(s), "?%#lx", addr);
 	}
 
 	return new string(s);
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 
 	traceFile = fopen(KnobOutputFile.Value().c_str(), "wb+");
 
-	for (int i = 0; i < KnobModuleList.NumberOfValues(); i++) {
+	for (size_t i = 0; i < KnobModuleList.NumberOfValues(); i++) {
 		string *module = new string(KnobModuleList.Value(i));
 		moduleList[module] = std::make_pair(0,0);
 		whitelistMode = true;
