@@ -25,14 +25,18 @@ INSTALLATION
 Requirements:
 
 *   PIN (http://www.pintool.org/)
-*   Compiler suite (Visual Studio Express)
+*   Compiler suite (Visual Studio Express) (Windows only)
 
 Procedure:
 
-1. Place this source code in the ${PIN}/tools/source/ directory.
-2. ..\nmake.bat ccovtrace
+1. Put the source code under the `${PIN_ROOT}/source/tools/RunTracer/` directory:
+    * `cd ${PIN_ROOT}/source/tools/`
+    * `git clone https://github.com/grugq/RunTracer/`
+    * `cd RunTracer`
+2. On Windows, run `..\nmake.bat ccovtrace`
+3. On Linux, run `make`
 
 USAGE
 -----
 
-Launch using the pin.bat tool in the ${PIN}/tools/ directory. See the --help output for more specific command line handling directions.
+Launch using the `pin.bat` or `pin.sh` tool in the `${PIN_ROOT}` directory. See the --help output for more specific command line handling directions.
