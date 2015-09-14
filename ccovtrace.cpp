@@ -148,14 +148,14 @@ LookupSymbol(ADDRINT addr)
 			ADDRINT offset = addr - (*it).second.first;
 			string *name = (*it).first;
 
-			snprintf(s, sizeof(s), "%s+%lx", name->c_str(), offset);
+			snprintf(s, sizeof(s), "%s+%llx", name->c_str(), offset);
 			found = 1;
 			break;
 		}
 	}
 
 	if (!found) {
-		snprintf(s, sizeof(s), "?%#lx", addr);
+		snprintf(s, sizeof(s), "?%#llx", addr);
 	}
 
 	return new string(s);
